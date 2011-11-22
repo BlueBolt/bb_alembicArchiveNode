@@ -57,6 +57,8 @@ MObject     alembicArchiveNode::aBBCenterX;
 MObject     alembicArchiveNode::aBBCenterY;
 MObject     alembicArchiveNode::aBBCenterZ;
 MObject     alembicArchiveNode::aFurLOD;
+MObject		alembicArchiveNode::aShowBB;
+
 
 SimpleAbcViewer::SceneState alembicArchiveNode::abcSceneState;
 SimpleAbcViewer::SceneManager alembicArchiveNode::abcSceneManager;
@@ -204,8 +206,12 @@ double alembicArchiveNode::setHolderTime(bool atClose = false) const
     return dtime;
 }
 
-void alembicArchiveNode::draw( M3dView& view, const MDagPath& DGpath, M3dView::DisplayStyle style, M3dView::DisplayStatus status )
+void alembicArchiveNode::draw( M3dView& view,
+		const MDagPath& DGpath,
+		M3dView::DisplayStyle style,
+		M3dView::DisplayStatus status )
 {
+	MStatus st;
     // update scene if needed
     if (m_abcdirty) updateAbc(this);
 
@@ -243,30 +249,9 @@ void alembicArchiveNode::draw( M3dView& view, const MDagPath& DGpath, M3dView::D
     
 //    glUseProgram(glshader.getProgram());    
 
-    
-
-
-/*        float o = 1.0;
-        GLfloat mat_front_diffuse[] = { col.r * o, col.g * o, col.b * o, o };
-        GLfloat mat_back_diffuse[] = { col.r * o, col.g * o, col.b * o, o };
-
-        GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 1.0 };
-        GLfloat mat_shininess[] = { 100.0 };
-        GLfloat light_position[] = { 20.0, 20.0, 20.0, 0.0 };
-
-        glClearColor( 0.0, 0.0, 0.0, 0.0 );
-        glMaterialfv( GL_FRONT, GL_DIFFUSE, mat_front_diffuse );
-        glMaterialfv( GL_FRONT, GL_SPECULAR, mat_specular );
-        glMaterialfv( GL_FRONT, GL_SHININESS, mat_shininess );
-
-        glMaterialfv( GL_BACK, GL_DIFFUSE, mat_back_diffuse );
-        glMaterialfv( GL_BACK, GL_SPECULAR, mat_specular );
-        glMaterialfv( GL_BACK, GL_SHININESS, mat_shininess );    
-*/
-
     glColor3f(col.r,col.g,col.b);
 
-    // draw the "scene"
+    // draw the "scene" from the alembic file
     std::string sceneKey = getSceneKey();
     if (abcSceneManager.hasKey(sceneKey))
         abcSceneManager.getScene(sceneKey)->draw(abcSceneState);
@@ -278,6 +263,22 @@ void alembicArchiveNode::draw( M3dView& view, const MDagPath& DGpath, M3dView::D
     // restore the old openGL settings
     glPopAttrib();
     // think glPopMatrix()
+
+    //add the boundingbox
+
+	MObject thisNode = thisMObject();
+
+    MPlug bbPlug(thisNode, aShowBB );
+    bool doBB = bbPlug.asBool() ;
+
+    if (doBB){
+    	MPlug lodPlug( thisNode, aLodBB );
+    	MVector bmin,bmax;
+    	st = bbValue();
+    	drawABox(lbmin, lbmax);
+
+    }
+
     view.endGL();
 //    TIMER.stop();
 //    TIMER.print();
@@ -325,6 +326,8 @@ MStatus alembicArchiveNode::compute( const MPlug& plug, MDataBlock& data )
 
     // update scene if needed
     if (m_abcdirty) updateAbc(this);
+
+
 
 
     // get attributes
@@ -436,6 +439,7 @@ MStatus alembicArchiveNode::compute( const MPlug& plug, MDataBlock& data )
         tmpData.setFloat((time+timeOffset).as(MTime::uiUnit()));
         tmpData.setClean();
     }
+
 
     return MS::kSuccess;
 }
@@ -638,7 +642,9 @@ MStatus alembicArchiveNode::initialize()
     nAttr.setKeyable(true);
 
 
-
+    aShowBB = nAttr.create( "showBoundingBox", "sbb", MFnNumericData::kBoolean, 0, &stat);
+	nAttr.setKeyable( true );
+	stat = addAttribute(aShowBB);
 
 /*    aMessageAttr = mAttr.create( "messageAttr", "me" );
     mAttr.setWritable(true);
@@ -684,6 +690,8 @@ MStatus alembicArchiveNode::initialize()
     addAttribute( aBBCenterZ );
 
     addAttribute( aFurLOD );
+
+    addAttribute( aShowBB );
 
 
     attributeAffects( aAbcFile, aBBMinX );
@@ -794,6 +802,68 @@ MStatus alembicArchiveNode::initialize()
 
 }
 
+//
+// simple bounding box creator
+void alembicArchiveNode::drawABox(const MVector &bmin, const MVector &bmax) {
+	glBegin( GL_LINES );
+
+	////////////////// BASE
+	glVertex3f(float(bmin.x),float(bmin.y),float(bmin.z));
+	glVertex3f(float(bmin.x),float(bmin.y),float(bmax.z));
+
+	glVertex3f(float(bmin.x),float(bmin.y),float(bmax.z));
+	glVertex3f(float(bmax.x),float(bmin.y),float(bmax.z));
+
+	glVertex3f(float(bmax.x),float(bmin.y),float(bmax.z));
+	glVertex3f(float(bmax.x),float(bmin.y),float(bmin.z));
+
+	glVertex3f(float(bmax.x),float(bmin.y),float(bmin.z));
+	glVertex3f(float(bmin.x),float(bmin.y),float(bmin.z));
+
+	////////////////// TOP
+	glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
+	glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
+
+	glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
+	glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
+
+	glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
+	glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
+
+	glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
+	glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
+
+	/////////////////// LEGS
+	glVertex3f(float(bmin.x),float(bmin.y),float(bmin.z));
+	glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
+
+	glVertex3f(float(bmin.x),float(bmin.y),float(bmax.z));
+	glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
+
+	glVertex3f(float(bmax.x),float(bmin.y),float(bmax.z));
+	glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
+
+	glVertex3f(float(bmax.x),float(bmin.y),float(bmin.z));
+	glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
+	glEnd();
+
+	// make the corners big points
+	glPushAttrib(GL_CURRENT_BIT);
+	glPointSize(5);
+	glBegin( GL_POINTS );
+	glVertex3f(float(bmin.x),float(bmin.y),float(bmin.z));
+	glVertex3f(float(bmin.x),float(bmin.y),float(bmax.z));
+	glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
+	glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
+	glVertex3f(float(bmax.x),float(bmin.y),float(bmin.z));
+	glVertex3f(float(bmax.x),float(bmin.y),float(bmax.z));
+	glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
+	glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
+	glEnd();
+	glPopAttrib();
+
+}
+
 MStatus alembicArchiveNode::doSomething()
 {
     MStatus stat;
@@ -816,3 +886,156 @@ std::string alembicArchiveNode::getSceneKey() const
 
     return std::string((abcfile+"/"+objectPath).asChar());
 }
+
+int alembicArchiveNode::getDisplayBoundingBox() const
+{
+    MFnDagNode fn( thisMObject() );
+
+    MPlug plug  = fn.findPlug( aShowBB );
+    bool doBB;
+
+    return doBB;
+}
+
+int alembicArchiveNode::archiveAttribs(	const MStringArray & shapeNames) const {
+	MStatus st;
+	unsigned ns = shapeNames.length();
+
+//MStringArray allGeoAttribs;
+	MSelectionList allGeoAttribs; // use a selectionList because it removes duplicates implicitly
+	MStringArray geoAttribs;
+
+	for (unsigned i=0;i<ns;i++) {
+		geoAttribs.clear();
+
+		MString cmd = "delightNodeQuery -shape \"";
+		cmd += shapeNames[i];
+		cmd += "\" -nodeType \"delightGeoAttribs\" -all";
+
+		st = MGlobal::executeCommand(cmd,geoAttribs);
+
+		unsigned ng = geoAttribs.length();
+
+		for (unsigned j=0;j<ng;j++) {
+			allGeoAttribs.add(geoAttribs[j]);
+		}
+
+	}
+// now we have all the geoAttribs nodes in a selection list
+	allGeoAttribs.getSelectionStrings(geoAttribs);
+	unsigned ng = geoAttribs.length();
+//cerr << "here: " << __LINE__ << endl;
+	for (unsigned j=0;j<ng;j++) {
+	// archive name must not have the namespace, so strip it out
+
+		MString archiveName;
+		MStringArray tmpSA;
+		geoAttribs[j].split(':',tmpSA);
+		archiveName = tmpSA[(tmpSA.length() -1)];
+
+
+		RiArchiveBegin( const_cast <char *>(archiveName.asChar()) , RI_NULL);
+
+		MString outputCmd = "DGA_output( \"";
+		outputCmd += geoAttribs[j];
+		outputCmd += "\",\"\")"; // second argument (renderpass for some legacy sohofx hook) is empty
+
+		st = MGlobal::executeCommand(outputCmd);
+
+		RiArchiveEnd();
+
+	}
+	return  ng;
+}
+
+int alembicArchiveNode::archiveShaders(	const MStringArray & shapeNames) const {
+	MStatus st;
+//cerr << "here: " << __LINE__ << endl;
+	unsigned ns = shapeNames.length();
+//MStringArray allGeoAttribs;
+	unsigned ts;
+//cerr << "here: " << __LINE__ << endl;
+	MStringArray shaderTypes;
+	shaderTypes.append("surface");
+	shaderTypes.append("displacement");
+	shaderTypes.append("atmosphere");
+	shaderTypes.append("interior");
+// cerr << "here: " << __LINE__ << endl;
+
+	for (unsigned t=0;t<4;t++) {
+
+		MSelectionList allShaders; // use a selectionList because it removes duplicates implicitly
+		MStringArray allShaderStrings; // use a selectionList because it removes duplicates implicitly
+
+		for (unsigned i=0;i<ns;i++) {
+			MString shader;
+
+
+			MString cmd = "delightNodeQuery -shape \"";
+			cmd += shapeNames[i];
+			cmd += "\" -nodeType \"";
+			cmd += shaderTypes[t];
+			cmd += "\" -highest";
+
+			st = MGlobal::executeCommand(cmd,shader);
+
+			if (shader != "") st = allShaders.add(shader);
+		}
+
+		allShaders.getSelectionStrings(allShaderStrings);
+		unsigned nss = allShaderStrings.length();
+		ts += nss;
+
+		for (unsigned j=0;j<nss;j++) {
+
+			MString shader = allShaderStrings[j];
+		// archive name must not have the namespace, so strip it out
+			MString archiveName;
+			MStringArray tmpSA;
+			shader.split(':',tmpSA);
+			archiveName = tmpSA[(tmpSA.length() -1)];
+			archiveName = (archiveName + " " +shaderTypes[t]);
+
+			RiArchiveBegin( const_cast <char *>(archiveName.asChar()), RI_NULL);
+			MString outputCmd = "DSN_output( \"";
+			outputCmd += shader;
+			outputCmd += "\",\"";
+			outputCmd += shaderTypes[t];
+			outputCmd += "\",\"\")";
+
+			st = MGlobal::executeCommand(outputCmd);
+			RiArchiveEnd();
+
+		}
+	}
+
+
+// now we have all the shader nodes in a selection list
+
+	return  ts;
+}
+
+MStatus alembicArchiveNode::archiveShadersAndAttribs() const {
+
+// cerr << "in archiveShadersAndAttribs" << endl;
+// we need to dig down to every shape contained within or under the sets or nodes connected to the lod geometry plug
+	MStatus st = MS::kSuccess;
+	MPlug geomPlug( thisMObject(), aLodGeometry );
+	MSelectionList allShapesList;
+	unsigned n = geomPlug.numElements();
+//MStringArray lodNames;
+	for (unsigned i = 0;i<n;i++){
+		MPlug tmpPlug = geomPlug.elementByPhysicalIndex(i);
+		MPlug setPlug =  tmpPlug.child(aLodGeometrySet,&st);
+		allShapesList.merge(getShapesFromPlug(setPlug));
+	}
+	MStringArray shapeNames;
+	allShapesList.getSelectionStrings(shapeNames);
+	unsigned ns = shapeNames.length();
+
+	archiveAttribs(shapeNames);
+	archiveShaders(shapeNames);
+
+	return st;
+}
+

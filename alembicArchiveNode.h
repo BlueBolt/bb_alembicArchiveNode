@@ -94,6 +94,8 @@ public:
 
     static  MObject     aFurLOD;
     
+    static  MObject     aShowBB;
+
     static  MTypeId     id;
     
     static SimpleAbcViewer::SceneState   abcSceneState;
@@ -110,5 +112,46 @@ private:
 
 
 };
+
+inline MStatus bbValue(const MPlug &bbPlug, MVector &bmin, MVector &bmax) {
+	MStatus st;
+
+	double minx;
+	double miny;
+	double minz;
+	double maxx;
+	double maxy;
+	double maxz;
+
+//	unsigned nc = bbPlug.numChildren(&st);ert;
+//	if (nc <2) return MS::kFailure;
+	MPlug minPlug = bbPlug.child(0,&st);er;
+	MPlug maxPlug = bbPlug.child(1,&st);er;
+
+//	nc = minPlug.numChildren(&st);ert;
+//	if (nc <3) return MS::kFailure;
+
+	MPlug minXPlug = minPlug.child(0,&st);er;
+	MPlug maxXPlug = minPlug.child(1,&st);er;
+	MPlug minYPlug = minPlug.child(2,&st);er;
+
+//	nc = maxPlug.numChildren(&st);ert;
+//	if (nc <3) return MS::kFailure;
+	MPlug maxYPlug = maxPlug.child(0,&st);er;
+	MPlug minZPlug = maxPlug.child(1,&st);er;
+	MPlug maxZPlug = maxPlug.child(2,&st);er;
+
+	st =minXPlug.getValue (minx );er;
+	st =maxXPlug.getValue (miny );er;
+	st =minYPlug.getValue (minz );er;
+	st =maxYPlug.getValue (maxx );er;
+	st =minZPlug.getValue (maxy );er;
+	st =maxZPlug.getValue (maxz );er;
+
+
+
+	bmin=MVector(minx,miny,minz);
+	bmax=MVector(maxx,maxy,maxz);
+	return MS::kSuccess;
 
 #endif
