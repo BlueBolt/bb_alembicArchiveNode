@@ -1,0 +1,633 @@
+/*
+
+ AEflockShapeTemplate.mel
+ jtools
+
+  Created by Julian Mann on 11/9/08.
+  Copyright (c) 2008 __MyCompanyName__. All rights reserved.
+*/
+
+global proc AErigInstGeneratorNew(string $nodeAttribute) {
+	setUITemplate -pst attributeEditorTemplate;
+	//string $node = attr.nodeFromNodeAttr($nodeAttribute);
+	//string $attr = attr.attrFromNodeAttr($nodeAttribute);
+	string $controlName = AE.controlNameFromNodeAttr($nodeAttribute); 
+	
+	frameLayout -l "Generator" -cll 0;
+	columnLayout -adj 1;
+	// textField $controlName;
+	scrollField -h 150  -wordWrap false $controlName;
+	button -l "Set" ($controlName +"BTN");
+	setParent ..;
+	setParent ..;	
+	setUITemplate -ppt;
+	AErigInstGeneratorReplace $nodeAttribute;
+	
+}
+
+global proc onGeneratorScrollExecute(string $nodeAttr, string $control){
+	string $text = `scrollField -q -text $control`;
+	$text = `encodeString $text`;
+	string $cmd = ("setAttr -type \"string\" \"" +  $nodeAttr+"\" \""+$text+"\"");
+	evalEcho($cmd) ;
+}
+
+global proc AErigInstGeneratorReplace(string $nodeAttribute){
+	
+	
+	setUITemplate -pst attributeEditorTemplate;
+
+	string $controlName = AE.controlNameFromNodeAttr($nodeAttribute); 
+	string $text = `getAttr $nodeAttribute`;
+	string $ec = ("onGeneratorScrollExecute " + $nodeAttribute+" "+$controlName);
+	scrollField -e -text $text -ec $ec -cc $ec $controlName;
+	button -e -c $ec ($controlName +"BTN");
+	// connectControl $controlName $nodeAttribute;
+
+	setUITemplate -ppt;
+	
+}
+////////////////
+proc string[] getParticleAtts(string $psys) {
+	string $result[];
+	string $atts[] = `listAttr -a $psys`;
+	for ($att in $atts) {
+		if (! `endsWith $att "0"`) {
+			$result[`size $result`] = $att;
+		}
+	} 
+	$atts = `listAttr -s -ud $psys`;
+	for ($att in $atts) {
+		$result[`size $result`] = $att;
+	} 
+	
+	return $result;
+}
+
+
+
+
+global proc j3DLInstPopulatePsysAttrPopUpMenu (string $nodeAttribute, string $popup){
+	//string $attr = attr.attrFromNodeAttr($nodeAttribute);
+	string $node = attr.nodeFromNodeAttr($nodeAttribute);
+	string $particles = `jDelightInstGetConnectedParticles $node`;
+	popupMenu -e -dai $popup;
+	if ($particles != "") 
+	{	
+		string $atts[] = getParticleAtts($particles);
+		// setParent $popup;
+		for ($att in $atts) {
+			menuItem -p $popup -l $att -c ("setAttr -type \"string\" \""+$nodeAttribute+"\" \""+$att+"\"");
+		}
+	} else {
+			menuItem -p $popup -l "empty";
+	}
+	setParent ..;
+}
+
+global proc AErigInstAttrNavNew(string $nodeAttribute) {
+	setUITemplate -pst attributeEditorTemplate;
+	global int $gTextColumnWidthIndex;	
+	string $attr = attr.attrFromNodeAttr($nodeAttribute);
+
+	// string $popName = ("j3DLInst"+$attr+"PopupMenu");
+	string $acName = ("j3DLInst"+$attr+"TF");
+
+	rowLayout -nc 2  -columnWidth 1  $gTextColumnWidthIndex;
+	
+
+	text -l $attr;
+	textField $acName;
+	//popupMenu;
+	setUITemplate -ppt;
+	AErigInstAttrNavReplace $nodeAttribute;
+	
+	
+}
+
+
+
+global proc AErigInstAttrNavReplace(string $nodeAttribute){
+	setUITemplate -pst attributeEditorTemplate;
+	string $attr = attr.attrFromNodeAttr($nodeAttribute);
+	//string $node = attr.nodeFromNodeAttr($nodeAttribute);
+
+	string $acName = ("j3DLInst"+$attr+"TF");
+	
+	// attrNavigationControlGrp -e -l $attr  -at $nodeAttribute  $acName;
+	
+	// connectControl $acName  $nodeAttribute ;
+	// find out what is connected and display its name
+	string $text ="";
+	string $conns[] = `listConnections -s 1 -d 0 -p 1 $nodeAttribute`;
+	if (`size $conns`) 	$text =$conns[0];
+
+	textField -e -text	$text $acName;
+
+	//string $popupMenu[] = `control -q -pma $acName`;
+	//string $postCmd = ("j3DLInstPopulatePsysAttrPopUpMenu \""+ $nodeAttribute+ "\" \"" + $popupMenu[0] +"\"" );
+	//popupMenu -e -pmc $postCmd $popupMenu[0];
+
+	setUITemplate -ppt;
+	
+}
+
+
+proc string makeNewWidget(string $parent){
+	setParent $parent;
+	global int $gTextColumnWidthIndex;	
+	string $f = `frameLayout -l "" -cll 0`;
+	string $col = `columnLayout`;
+	
+	//rowLayout -nc 2  -columnWidth 1  $gTextColumnWidthIndex;
+	//text;
+	textFieldGrp;
+	//popupMenu;
+	setParent $col;
+	
+	
+
+	attrFieldSliderGrp  targetAttTF; 
+	/*
+	rowLayout -nc 2  -columnWidth 1  $gTextColumnWidthIndex;
+	text -l "Target";
+	textField targetAttTF;
+	setParent $col;
+	*/
+	
+	rowLayout -nc 2 -columnWidth 1  $gTextColumnWidthIndex;;
+	text -label "";
+	symbolButton -image "smallTrash.xpm" delAttrSB;
+	
+	setParent $parent;
+	return $f;
+}
+
+global proc onChangeUserMapLabel(string $compound, string $control) {
+	string $val=`textFieldGrp -q -text  $control`;
+	setAttr -type "string" ($compound+".userLabel") $val;
+}
+
+proc populateUserElement(string $nodeAttribute, int $el, string $layout){
+	string $compound = ($nodeAttribute+"["+$el+"]");
+	string $attr = attr.attrFromNodeAttr($nodeAttribute);
+	setParent $layout;
+	// frameLayout -e -l ($attr+"["+$el+"]") $layout;
+	string $cols[] = `frameLayout -q -ca $layout`;
+	//print "------------------------\n";
+	//print $cols;
+	string $rows[] = `columnLayout -q -ca $cols[0]`;
+	//print $rows;
+	//string $popupMenus[];
+	string $children[] ;
+	//string $postCmd;
+	string $exactNodeAttr;
+	string $text ="";	
+	string $conns[] ;
+
+	$exactNodeAttr = ($compound+".userPP");
+	//$children = `rowLayout -q -ca $rows[0]`;
+ 	$text ="";	
+	$conns = `listConnections -s 1 -d 0 -p 1 $exactNodeAttr`;
+	if (`size $conns`) 	{
+		$text =$conns[0];
+	} else {
+		$text =`getAttr ($compound+".userLabel")`;
+	}
+	textFieldGrp -e -label ("userPP ["+$el+"]") -text	$text $rows[0];
+	textFieldGrp -e -cc ("onChangeUserMapLabel "+ $compound +" " + $rows[0]) $rows[0];
+
+	//connectControl $children[1] $exactNodeAttr;
+	//$popupMenus = `control -q -pma $children[1]`;
+	//$postCmd = ("j3DLInstPopulatePsysAttrPopUpMenu \""+$exactNodeAttr+ "\" \"" + $popupMenus[0] +"\"" );
+	//popupMenu -e -pmc $postCmd $popupMenus[0];
+
+	// $exactNodeAttr = ($compound+".userTarget");
+	//$children = `rowLayout -q -ca $rows[1]`;	
+	attrFieldSliderGrp -e -at  ($compound+".userTarget")  -l ("userTarget ["+$el+"]")  $rows[1];
+	// connectControl ($compound+".userTarget") $rows[1];
+
+	
+	// textField -e -text	$text $children[1];
+
+
+
+	//print ($children[1]+"\n");
+	//connectControl $children[1] ($compound+".userTarget");
+
+	$children = `rowLayout -q -ca $rows[2]`;
+	//print ($children[1]+" ");
+	//print ($children[2]+"\n");
+	
+	text -e -l ("") $children[0] ;
+	string $delString = ("removeMultiInstance -break true \""+$compound+"\";");
+	$delString += ("AErigInstUserMapReplace \""+$nodeAttribute+"\"");
+	symbolButton -e -command $delString $children[1];
+	// frameLayout -e -label ($attr+"["+$el+"]") $layout;
+	// frameLayout -e -label "fddg" $layout;
+	
+}
+
+global proc AErigInstAddUIElement(string $nodeAttribute) {
+	int $ni = `attr.findNextNonExistentIndex $nodeAttribute`;
+	string $plugName = ($nodeAttribute + "[" + $ni + "]");
+	// Create a plug by accessing it
+	catchQuiet( `getAttr -type $plugName`);
+}
+
+
+global proc AErigInstUserMapReplace(string $nodeAttribute){
+	setUITemplate -pst attributeEditorTemplate;
+	string $node = attr.nodeFromNodeAttr($nodeAttribute);
+	string $attr = attr.attrFromNodeAttr($nodeAttribute);
+	string $controlName = AE.controlNameFromNodeAttr($nodeAttribute); 
+	
+
+	int $nAtts = `getAttr -size $nodeAttribute`;
+	string $widgets[] =  `columnLayout -q -ca $controlName`;
+	int $nWidgets = `size $widgets`;
+	int $change = $nAtts - $nWidgets;
+	if ($change > 0) { // push
+		for ($i = 0;$i<$change;$i++) {
+			makeNewWidget($controlName);
+		}
+	} else if ($change < 0) { // pop
+		for ($i = 1;$i<=($change*-1);$i++) {
+			deleteUI $widgets[($nWidgets - $i)];
+		}
+	}
+	
+	// now we have resolved the UI structure, fill in the labels and values
+	string $widgets[] =  `columnLayout -q -ca $controlName`;
+	int $mi[] = `getAttr -mi $nodeAttribute`;
+	int $siz = `size $mi`;
+	for ($i = 0;$i<$siz;$i++) {
+		int $el = $mi[$i];
+		string $layout = $widgets[$i];
+		populateUserElement($nodeAttribute,$el,$layout);
+	}
+	string $addStr = ("AErigInstAddUIElement \""+$nodeAttribute+"\";");
+	$addStr += ("AErigInstUserMapReplace \""+$nodeAttribute+"\"");
+
+	button -e -c $addStr ($controlName+"_addItemBtn");
+	
+	setUITemplate -ppt;
+	
+	
+}
+
+global proc AErigInstUserMapNew(string $nodeAttribute) {
+	setUITemplate -pst attributeEditorTemplate;
+	global int $gTextColumnWidthIndex;	
+	string $node = attr.nodeFromNodeAttr($nodeAttribute);
+	string $attr = attr.attrFromNodeAttr($nodeAttribute);
+	string $controlName = AE.controlNameFromNodeAttr($nodeAttribute); 
+	
+	
+	columnLayout -adj 1 $controlName ;
+	
+	setParent ..;
+	rowLayout -nc 2  -columnWidth 1  $gTextColumnWidthIndex ($controlName+"_addItemRow");
+	text -l "";
+	button -l "Add User Map" ($controlName+"_addItemBtn");
+	setParent ..;
+
+	setUITemplate -ppt;
+	AErigInstUserMapReplace $nodeAttribute;
+	
+}
+
+
+
+/////////////////////////////////////////
+proc string makeNewLodWidget(string $parent){
+	setParent $parent;
+	global int $gTextColumnWidthIndex;	
+	string $f = `frameLayout -l "" -cll 0`;
+	string $col = `columnLayout`;
+	
+	//rowLayout -nc 2  -columnWidth 1  $gTextColumnWidthIndex;
+	//text -l "Node";
+	//textField nodeTF;
+	//setParent $col;
+	
+	attrNavigationControlGrp nodeTF;
+	
+	rowLayout -nc 2  -columnWidth 1  $gTextColumnWidthIndex;
+	text -l "Start";
+	floatField startTF;
+	setParent $col;
+	
+	rowLayout -nc 2  -columnWidth 1  $gTextColumnWidthIndex;
+	text -l "Lo";
+	floatField loTF;
+	setParent $col;
+	
+	rowLayout -nc 2  -columnWidth 1  $gTextColumnWidthIndex;
+	text -l "High";
+	floatField hiTF;
+	setParent $col;
+	
+	rowLayout -nc 2  -columnWidth 1  $gTextColumnWidthIndex;
+	text -l "End";
+	floatField enTF;
+	setParent $col;
+	
+	rowLayout -nc 2  -columnWidth 1  $gTextColumnWidthIndex;
+	text -l "";
+	symbolButton -image "smallTrash.xpm" delSB;
+	setParent $col;
+
+	
+	setParent $parent;
+	return $f;
+}
+
+
+proc populateLodGeoElement(string $nodeAttribute, int $el, string $layout){
+	string $compound = ($nodeAttribute+"["+$el+"]");
+	string $attr = attr.attrFromNodeAttr($nodeAttribute);
+	setParent $layout;
+	// frameLayout -e -l ($attr+"["+$el+"]") $layout;
+	string $cols[] = `frameLayout -q -ca $layout`;
+	//print "------------------------\n";
+	//print $cols;
+	string $rows[] = `columnLayout -q -ca $cols[0]`;
+	//print $rows;
+	//string $popupMenus[];
+	string $children[] ;
+	//string $postCmd;
+	string $exactNodeAttr;
+	
+	
+	$exactNodeAttr = ($compound+".lodGeometrySet");
+	//$children = `rowLayout -q -ca $rows[0]`;
+	//connectControl $children[1] $exactNodeAttr;
+	//text -e -l ("lodGeometryName ["+$el+"]") $children[0] ;
+
+	attrNavigationControlGrp -e -l ("lodGeometrySet ["+$el+"]") -at $exactNodeAttr  $rows[0];
+	
+	
+	$children = `rowLayout -q -ca $rows[1]`; // start
+	$exactNodeAttr = ($compound+".lodGeometryStart");
+	connectControl $children[1] $exactNodeAttr;
+	
+	$children = `rowLayout -q -ca $rows[2]`; // start
+	$exactNodeAttr = ($compound+".lodGeometryLo");
+	connectControl $children[1] $exactNodeAttr;
+	
+	$children = `rowLayout -q -ca $rows[3]`; // start
+	$exactNodeAttr = ($compound+".lodGeometryHigh");
+	connectControl $children[1] $exactNodeAttr;
+
+	$children = `rowLayout -q -ca $rows[4]`; // start
+	$exactNodeAttr = ($compound+".lodGeometryEnd");
+	connectControl $children[1] $exactNodeAttr;
+
+	$children = `rowLayout -q -ca $rows[5]`; // start
+
+	string $delString = ("removeMultiInstance -break true \""+$compound+"\";");
+	$delString += ("AErigInstLodGeometryReplace \""+$nodeAttribute+"\"");
+	symbolButton -e -command $delString $children[1];
+	// frameLayout -e -label ($attr+"["+$el+"]") $layout;
+	// frameLayout -e -label "fddg" $layout;
+	
+}
+
+
+
+
+
+
+
+global proc AErigInstLodGeometryReplace(string $nodeAttribute){
+	setUITemplate -pst attributeEditorTemplate;
+	string $node = attr.nodeFromNodeAttr($nodeAttribute);
+	string $attr = attr.attrFromNodeAttr($nodeAttribute);
+	string $controlName = AE.controlNameFromNodeAttr($nodeAttribute); 
+	
+
+	int $nAtts = `getAttr -size $nodeAttribute`;
+	string $widgets[] =  `columnLayout -q -ca $controlName`;
+	int $nWidgets = `size $widgets`;
+	int $change = $nAtts - $nWidgets;
+	if ($change > 0) { // push
+		for ($i = 0;$i<$change;$i++) {
+			makeNewLodWidget($controlName);
+		}
+	} else if ($change < 0) { // pop
+		for ($i = 1;$i<=($change*-1);$i++) {
+			deleteUI $widgets[($nWidgets - $i)];
+		}
+	}
+	// now we have resolved the UI structure, fill in the labels and values
+	string $widgets[] =  `columnLayout -q -ca $controlName`;
+	int $mi[] = `getAttr -mi $nodeAttribute`;
+	int $siz = `size $mi`;
+	for ($i = 0;$i<$siz;$i++) {
+		int $el = $mi[$i];
+		string $layout = $widgets[$i];
+		populateLodGeoElement($nodeAttribute,$el,$layout);
+	}
+	string $addStr = ("AErigInstAddUIElement \""+$nodeAttribute+"\";");
+	$addStr += ("AErigInstLodGeometryReplace \""+$nodeAttribute+"\"");
+	
+	
+	button -e -c $addStr ($controlName+"_addItemBtn");
+	
+	setUITemplate -ppt;
+	
+	
+}
+
+global proc AErigInstLodGeometryNew(string $nodeAttribute) {
+	setUITemplate -pst attributeEditorTemplate;
+	global int $gTextColumnWidthIndex;	
+	string $node = attr.nodeFromNodeAttr($nodeAttribute);
+	string $attr = attr.attrFromNodeAttr($nodeAttribute);
+	string $controlName = AE.controlNameFromNodeAttr($nodeAttribute); 
+	
+	
+	columnLayout -adj 1 $controlName ;
+	
+	setParent ..;
+	rowLayout -nc 2  -columnWidth 1  $gTextColumnWidthIndex ($controlName+"_addItemRow");
+	text -l "";
+	button -l "Add an LOD" ($controlName+"_addItemBtn");
+	setParent ..;
+
+	setUITemplate -ppt;
+	AErigInstLodGeometryReplace $nodeAttribute;
+	
+}
+
+
+
+
+
+global proc AEflockShapeTemplate (string $nodeName) {
+
+	
+	
+	
+	editorTemplate -beginScrollLayout;
+	/*
+	editorTemplate -cl 0 -beginLayout   "Source";
+	editorTemplate -addControl "particles";
+	editorTemplate -endLayout;	
+*/
+
+
+	editorTemplate -cl 0 -beginLayout   "Id Connections";
+		editorTemplate -callCustom "AErigInstAttrNavNew" "AErigInstAttrNavReplace" "particleId";
+		editorTemplate -callCustom "AErigInstAttrNavNew" "AErigInstAttrNavReplace" "sortedId";
+		editorTemplate -callCustom "AErigInstAttrNavNew" "AErigInstAttrNavReplace" "idIndex";
+	editorTemplate -endLayout;		
+
+	editorTemplate -cl 0 -beginLayout "Fish Removal";			
+	editorTemplate  -addControl "cullList" ;
+	editorTemplate -endLayout;
+	
+	
+	editorTemplate -cl 0 -beginLayout   "Transformations";
+		editorTemplate -addControl "rotateType";
+		editorTemplate -addControl "aimFrontAxis";
+		editorTemplate -addControl "aimUpAxis";
+		editorTemplate -addControl "rotateOrder";
+
+		
+
+		editorTemplate -callCustom "AErigInstAttrNavNew" "AErigInstAttrNavReplace" "translatePP";
+		editorTemplate -callCustom "AErigInstAttrNavNew" "AErigInstAttrNavReplace" "rotatePP";
+		editorTemplate -callCustom "AErigInstAttrNavNew" "AErigInstAttrNavReplace" "rotateUpPP";
+		editorTemplate -callCustom "AErigInstAttrNavNew" "AErigInstAttrNavReplace" "scalePP";
+		editorTemplate -cl 0 -beginLayout "Transformation Targets";
+		editorTemplate -addControl "targetId";
+		
+			editorTemplate -addControl "translateTarget";
+			editorTemplate -addControl "rotateTarget";
+			editorTemplate -addControl "scaleTarget";
+		editorTemplate -endLayout;			
+	editorTemplate -endLayout;		
+	
+	editorTemplate -cl 0 -beginLayout   "User Map";
+	editorTemplate -callCustom "AErigInstUserMapNew" "AErigInstUserMapReplace"	"userMap";
+	editorTemplate -endLayout;	
+	
+	
+	editorTemplate -cl 0 -beginLayout   "Bounding Box Information";
+		editorTemplate -cl 0 -beginLayout   "Lod Bounding Box";
+	editorTemplate -addControl "lodBBMin";
+	editorTemplate -addControl "lodBBMax";		
+	//editorTemplate -addControl "proceduralType";
+	//editorTemplate -callCustom "AErigInstGeneratorNew" "AErigInstGeneratorReplace"	"generator";
+	editorTemplate -endLayout;	
+
+	editorTemplate -cl 0 -beginLayout   "Points Bounding Box";
+	editorTemplate -addControl "pointsBBMin";
+	editorTemplate -addControl "pointsBBMax";		
+	//editorTemplate -addControl "proceduralType";
+	//editorTemplate -callCustom "AErigInstGeneratorNew" "AErigInstGeneratorReplace"	"generator";
+	editorTemplate -endLayout;
+	
+	editorTemplate -endLayout;
+	
+	
+		/*	*/
+
+
+/*	*/	
+	
+	editorTemplate -cl 0 -beginLayout   "Lod Geometry";
+	//	editorTemplate -addControl "lodStrategy";
+	editorTemplate -callCustom "AErigInstLodGeometryNew" "AErigInstLodGeometryReplace"	"lodGeometry";
+	editorTemplate -endLayout;	
+	
+
+	/*
+	
+	editorTemplate -cl 0 -beginLayout   "Geometry";
+	editorTemplate -callCustom "AEdelightLodFileNameNew" "AEdelightLodFileNameReplace"	"relativePathRoot";
+	editorTemplate -callCustom "AEdelightLodFileNameNew" "AEdelightLodFileNameReplace"	"outputFilename";
+	editorTemplate -endLayout;	
+	
+	
+	editorTemplate -cl 0 -beginLayout   "Bounding Box";
+	editorTemplate -addControl "detailBBFromSources";
+	
+	editorTemplate -addControl "boxMin";
+	editorTemplate -addControl "boxMax";
+	editorTemplate -endLayout;
+	
+	
+	
+	
+	//editorTemplate -cl 0 -beginLayout   "Levels";
+	editorTemplate -callCustom "AEdelightLodLevelsListNew" "AEdelightLodLevelsListReplace"	"level";
+	//editorTemplate -endLayout;
+	
+	*/	
+	//editorTemplate -addExtraControls;
+	// supressed attributes
+	// AElocatorInclude $nodeName;
+	
+	editorTemplate -suppress "pointsBB" ;
+	editorTemplate -suppress "lodBB" ;
+	editorTemplate -suppress "translatePP" ;
+	editorTemplate -suppress "rotatePP" ;
+	editorTemplate -suppress "rotateUpPP" ;
+	editorTemplate -suppress "scalePP";
+	editorTemplate -suppress "generator";
+	editorTemplate -suppress "userMap";
+	editorTemplate -suppress "lodGeometry";
+	//editorTemplate -suppress "userMap";	
+
+	
+	editorTemplate -suppress "useObjectColor" ;
+	editorTemplate -suppress "objectColor" ;
+	editorTemplate -suppress "nodeState"; 
+	editorTemplate -suppress "visibility"; 
+	editorTemplate -suppress "intermediateObject"; 
+	editorTemplate -suppress "lodVisibility"; 
+	editorTemplate -suppress "instObjGroups";  
+	editorTemplate -suppress "compInstObjGroups"; 
+	
+	editorTemplate -suppress "caching";
+	editorTemplate -suppress "template";
+	editorTemplate -suppress "drawOverride" ;
+	editorTemplate -suppress "renderInfo" ;
+	editorTemplate -suppress "motionBlur" ;
+	editorTemplate -suppress "visibleInReflections" ;
+	editorTemplate -suppress "visibleInRefractions" ; 
+	editorTemplate -suppress "castsShadows" ;
+	editorTemplate -suppress "maxVisibilitySamplesOverride";
+	editorTemplate -suppress "maxVisibilitySamples";
+	editorTemplate -suppress "geometryAntialiasingOverride";
+	editorTemplate -suppress "antialiasingLevel";
+	editorTemplate -suppress "shadingSamplesOverride";
+	editorTemplate -suppress "shadingSamples";
+	editorTemplate -suppress "maxShadingSamples";
+	editorTemplate -suppress "volumeSamplesOverride";
+	editorTemplate -suppress "volumeSamples";
+	editorTemplate -suppress "primaryVisibility";
+
+	editorTemplate -suppress "ghosting";
+	editorTemplate -suppress "ghostDriver";
+	editorTemplate -suppress "ghostingControl";
+	editorTemplate -suppress "renderLayerInfo";
+	editorTemplate -suppress "primaryVisibility";
+	editorTemplate -suppress "ghostCustomSteps";
+	editorTemplate -suppress "ghostFrames";
+	editorTemplate -suppress "ghostRangeStart";
+	editorTemplate -suppress "ghostRangeEnd";
+	editorTemplate -suppress "receiveShadows";
+	editorTemplate -suppress "depthJitter";
+	editorTemplate -suppress "ignoreSelfShadowing";
+	editorTemplate -suppress "localScale";
+	editorTemplate -suppress "primaryVisibility";
+	
+	editorTemplate -suppress "localPosition";
+	
+	
+
+}
