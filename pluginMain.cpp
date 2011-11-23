@@ -7,21 +7,27 @@
 //
 
 #include "alembicArchiveNode.h"
+#include "delightCacheAlembic.h"
+
+#include "errorMacros.h"
 
 #include <maya/MFnPlugin.h>
 #include <maya/MGlobal.h>
 
 MStatus initializePlugin( MObject obj )
 { 
-    MStatus   status;
+    MStatus   st;
     const char * pluginVersion = "0.1.0";
     MFnPlugin plugin( obj, "BlueBolt Ltd.",pluginVersion, "Any");
 
-    status = plugin.registerNode( "alembicArchiveNode", alembicArchiveNode::id, alembicArchiveNode::creator, alembicArchiveNode::initialize, MPxNode::kLocatorNode );
-    if (!status) {
-        status.perror("registerNode");
-        return status;
+    st = plugin.registerNode( "alembicArchiveNode", alembicArchiveNode::id, alembicArchiveNode::creator, alembicArchiveNode::initialize, MPxNode::kLocatorNode );
+    if (!st) {
+        st.perror("registerNode");
+        return st;
     }
+
+	st = plugin.registerCommand( "delightCacheAlembic",delightCacheAlembic::creator ,delightCacheAlembic::newSyntax);
+
 
     MString info = "alembicArchiveNode v";
         info += pluginVersion;
@@ -29,19 +35,22 @@ MStatus initializePlugin( MObject obj )
         info += Alembic::AbcCoreAbstract::GetLibraryVersion().c_str();
         MGlobal::displayInfo(info);
 
-    return status;
+    return st;
 }
 
 MStatus uninitializePlugin( MObject obj)
 {
-    MStatus   status;
+    MStatus   st;
     MFnPlugin plugin( obj );
 
-    status = plugin.deregisterNode( alembicArchiveNode::id );
-    if (!status) {
-        status.perror("deregisterNode");
-        return status;
+
+    st = plugin.deregisterNode( alembicArchiveNode::id );
+    if (!st) {
+        st.perror("deregisterNode");
+        return st;
     }
 
-    return status;
+	st = plugin.deregisterCommand( "delightCacheAlembic" );er;
+
+    return st;
 }

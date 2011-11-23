@@ -35,6 +35,28 @@ global proc AEalembicArchiveNodeTemplate (string $nodeName) {
 	editorTemplate -suppress "outFrame" ;
 	
 	
+	editorTemplate -suppress "geoBoundingBox" ;
+	editorTemplate -suppress "geoBbMin" ;
+	editorTemplate -suppress "geoBbMax" ;
+	editorTemplate -suppress "geoBbSize" ;
+	
+	//hide the maya defaults
+	
+	editorTemplate -suppress "rmbCommand" ;
+	editorTemplate -suppress "templateName" ;
+	editorTemplate -suppress "templatePath" ;
+	editorTemplate -suppress "viewName" ;
+	editorTemplate -suppress "iconName" ;
+	editorTemplate -suppress "viewMode" ;
+	editorTemplate -suppress "templateVersion" ;
+	editorTemplate -suppress "uiTreatment" ;
+	editorTemplate -suppress "customTreatment" ;
+	editorTemplate -suppress "creator" ;
+	editorTemplate -suppress "creationDate" ;
+	editorTemplate -suppress "containerType" ;
+	
+	editorTemplate -suppress "blackBox" ;
+	
 	editorTemplate -suppress "useObjectColor" ;
 	editorTemplate -suppress "objectColor" ;
 	editorTemplate -suppress "nodeState"; 

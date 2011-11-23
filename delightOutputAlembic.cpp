@@ -46,26 +46,20 @@ MStatus delightOutputAlembic::doIt( const MArgList& args )
 	alembicArchiveNode * alembicArchiveNodeObject = 0;
 	MString fullPathName;
 	
-	for (;! iter.isDone() ; iter.next()) {
-		iter.getDependNode( rigInstObject );
-		rigInstFn.setObject( rigInstObject );
-		if (rigInstFn.typeId() == alembicArchiveNode::id) {
-			iter.getDagPath( rigInstDagPath );
-			fullPathName = rigInstDagPath.fullPathName();
-			alembicArchiveNodeObject =  (alembicArchiveNode*)rigInstFn.userNode();
-			break;
-		}
-	}
+	ofstream f("/disk1/tmp/debug_alembicArchive.txt", ios::app);
+	f << "Args: " << args.length() << endl;
+	  for(int i = 0; i < args.length(); ++i)
+	  {
+	    MString str;
+	    args.get(i, str);
+	    f << str.asChar() << endl;
+	  }
+	  f.close();
 	
 	if (!(alembicArchiveNodeObject)) {
 		displayError("No alembicArchiveNode node specified");
 		return MS::kUnknownParameter;
 	}
-
-	st = alembicArchiveNodeObject->removeCache();	er;
-	st = alembicArchiveNodeObject->addSlice(1.0f);er;
-	st = alembicArchiveNodeObject->emitCache();er;
-	st = alembicArchiveNodeObject->removeCache();	er;
 
 	return MS::kSuccess;
 }

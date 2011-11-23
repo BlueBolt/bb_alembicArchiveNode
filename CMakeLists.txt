@@ -51,6 +51,7 @@ DrawContext.h
 IObjectDrw.h
 MeshDrwHelper.h
 SceneManager.h
+delightCacheAlembic.h
 )
 
 SET( CXX_FILES
@@ -64,6 +65,7 @@ PathUtil.cpp
 pluginMain.cpp
 Scene.cpp
 Transport.cpp
+delightCacheAlembic.cpp
 )
 
 SET( SOURCE_FILES ${CXX_FILES} ${H_FILES} )

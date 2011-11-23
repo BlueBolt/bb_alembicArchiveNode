@@ -4,14 +4,9 @@ global proc DL_userGetGeoTypeData(
 	string $user_cache_commands[],
 	string $user_output_commands[]
 ){
-	 $user_types[0] = "flockShape";
+	 $user_types[0] = "alembicArchiveNode";
 	 $user_plugin_requirements[0] = "";
-	 $user_cache_commands[0] = "delightCacheFlock";
-	 $user_output_commands[0] = "delightOutputFlock";
+	 $user_cache_commands[0] = "delightCacheAlembic";
+	 $user_output_commands[0] = "delightOutputAlembic";
 	 
-	 $user_types[1] = "alembicArchiveNode";
-	 $user_plugin_requirements[1] = "";
-	 $user_cache_commands[1] = "delightCacheAlembic";
-	 $user_output_commands[1] = "delightOutputAlembic";
-
 }
