@@ -1,13 +1,13 @@
 #ifndef _alembicArchiveNode
 #define _alembicArchiveNode
 //
-// Copyright (C) 2011 Anima Vitae Ltd. 
+// Copyright (C) 2011 BlueBolt Ltd.
 // 
 // File: alembicArchiveNode.h
 //
 // Dependency Graph Node: alembicArchiveNode
 //
-// Author: olli
+// Author: Ashley Retallack
 //
 
 #include "Foundation.h"
@@ -18,6 +18,7 @@
 #include <maya/MPxNode.h>
 #include <maya/MPxLocatorNode.h>
 #include <maya/MFnNumericAttribute.h>
+#include <maya/MFnCompoundAttribute.h>
 #include <maya/MFnData.h>
 #include <maya/MFnDagNode.h>
 #include <maya/MFnMessageAttribute.h>
@@ -33,6 +34,10 @@
 #include <maya/MFnDependencyNode.h>
 #include <maya/MDagPath.h>
 #include <maya/MNodeMessage.h>
+#include <maya/MItSelectionList.h>
+
+//include the renderman interface header for the procedural stuff
+#include "ri.h"
 
 #include <iostream>
 
@@ -47,6 +52,7 @@ public:
     virtual void postConstructor();
     virtual void copyInternalData( MPxNode* srcNode );
     virtual void draw( M3dView&, const MDagPath&, M3dView::DisplayStyle, M3dView::DisplayStatus);
+
     virtual bool isBounded() const;
     virtual MBoundingBox boundingBox()const ;
     virtual bool excludeAsLocator() const;
@@ -73,28 +79,23 @@ public:
     static  MObject     aShutterClose;
     static  MObject     aOutFps;
     static  MObject     aOutFrame;
-    static  MObject     aBBMinX;
-    static  MObject     aBBMinY;
-    static  MObject     aBBMinZ;
-    static  MObject     aBBMaxX;
-    static  MObject     aBBMaxY;
-    static  MObject     aBBMaxZ;
+    static  MObject     aBBMin;
+    static  MObject     aBBMax;
+    static	MObject		aBBSize;
+    static	MObject		aBB;
 
     static  MObject     aFurBBPad;
-    static  MObject     aFurBBMinX;
-    static  MObject     aFurBBMinY;
-    static  MObject     aFurBBMinZ;
-    static  MObject     aFurBBMaxX;
-    static  MObject     aFurBBMaxY;
-    static  MObject     aFurBBMaxZ;
+    static  MObject     aFurBBMin;
+    static  MObject     aFurBBMax;
+    static	MObject		aFurBBSize;
+    static 	MObject		aFurBB;
 
-    static  MObject     aBBCenterX;
-    static  MObject     aBBCenterY;
-    static  MObject     aBBCenterZ;
+    static  MObject     aBBCenter;
 
     static  MObject     aFurLOD;
     
     static  MObject     aShowBB;
+//    static  MObject     aShowFurBB;
 
     static  MTypeId     id;
     
@@ -108,7 +109,15 @@ public:
     
     static GlShaderHolder glshader;
     
+	MStatus archiveShadersAndAttribs() const;
+
+	int archiveAttribs(	const MStringArray & shapeNames) const;
+
+	int archiveShaders(	const MStringArray & shapeNames) const;
+
 private:
+
+	void drawABox(const MVector &bbmin, const MVector &bbmax) ;
 
 
 };
@@ -125,33 +134,34 @@ inline MStatus bbValue(const MPlug &bbPlug, MVector &bmin, MVector &bmax) {
 
 //	unsigned nc = bbPlug.numChildren(&st);ert;
 //	if (nc <2) return MS::kFailure;
-	MPlug minPlug = bbPlug.child(0,&st);er;
-	MPlug maxPlug = bbPlug.child(1,&st);er;
+	MPlug minPlug = bbPlug.child(0,&st);
+	MPlug maxPlug = bbPlug.child(1,&st);
 
 //	nc = minPlug.numChildren(&st);ert;
 //	if (nc <3) return MS::kFailure;
 
-	MPlug minXPlug = minPlug.child(0,&st);er;
-	MPlug maxXPlug = minPlug.child(1,&st);er;
-	MPlug minYPlug = minPlug.child(2,&st);er;
+	MPlug minXPlug = minPlug.child(0,&st);
+	MPlug maxXPlug = minPlug.child(1,&st);
+	MPlug minYPlug = minPlug.child(2,&st);
 
 //	nc = maxPlug.numChildren(&st);ert;
 //	if (nc <3) return MS::kFailure;
-	MPlug maxYPlug = maxPlug.child(0,&st);er;
-	MPlug minZPlug = maxPlug.child(1,&st);er;
-	MPlug maxZPlug = maxPlug.child(2,&st);er;
+	MPlug maxYPlug = maxPlug.child(0,&st);
+	MPlug minZPlug = maxPlug.child(1,&st);
+	MPlug maxZPlug = maxPlug.child(2,&st);
 
-	st =minXPlug.getValue (minx );er;
-	st =maxXPlug.getValue (miny );er;
-	st =minYPlug.getValue (minz );er;
-	st =maxYPlug.getValue (maxx );er;
-	st =minZPlug.getValue (maxy );er;
-	st =maxZPlug.getValue (maxz );er;
+	st =minXPlug.getValue (minx );
+	st =maxXPlug.getValue (miny );
+	st =minYPlug.getValue (minz );
+	st =maxYPlug.getValue (maxx );
+	st =minZPlug.getValue (maxy );
+	st =maxZPlug.getValue (maxz );
 
 
 
 	bmin=MVector(minx,miny,minz);
 	bmax=MVector(maxx,maxy,maxz);
 	return MS::kSuccess;
+}
 
 #endif

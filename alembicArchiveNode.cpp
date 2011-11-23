@@ -1,15 +1,15 @@
 //
-// Copyright (C) 2011 Anima Vitae Ltd. 
+// Copyright (C) 2011 BlueBolt Ltd.
 // 
-// File: alembicArchiveNode.cpp
+// File: alembicArchiveNode.h
 //
 // Dependency Graph Node: alembicArchiveNode
 //
-// Author: olli
+// Author: Ashley Retallack
 //
 
 #include <maya/MCommandResult.h>
-
+#include <math.h>
 #include "alembicArchiveNode.h"
 
 #include <maya/MPlug.h>
@@ -40,22 +40,18 @@ MObject     alembicArchiveNode::aShutterOpen;
 MObject     alembicArchiveNode::aShutterClose;
 MObject     alembicArchiveNode::aOutFps;
 MObject     alembicArchiveNode::aOutFrame;
-MObject     alembicArchiveNode::aBBMinX;
-MObject     alembicArchiveNode::aBBMinY;
-MObject     alembicArchiveNode::aBBMinZ;
-MObject     alembicArchiveNode::aBBMaxX;
-MObject     alembicArchiveNode::aBBMaxY;
-MObject     alembicArchiveNode::aBBMaxZ;
+MObject     alembicArchiveNode::aBBMin;
+MObject     alembicArchiveNode::aBBMax;
+MObject 	alembicArchiveNode::aBBSize;
+MObject 	alembicArchiveNode::aBB;
+
 MObject     alembicArchiveNode::aFurBBPad;
-MObject     alembicArchiveNode::aFurBBMinX;
-MObject     alembicArchiveNode::aFurBBMinY;
-MObject     alembicArchiveNode::aFurBBMinZ;
-MObject     alembicArchiveNode::aFurBBMaxX;
-MObject     alembicArchiveNode::aFurBBMaxY;
-MObject     alembicArchiveNode::aFurBBMaxZ;
-MObject     alembicArchiveNode::aBBCenterX;
-MObject     alembicArchiveNode::aBBCenterY;
-MObject     alembicArchiveNode::aBBCenterZ;
+MObject     alembicArchiveNode::aFurBBMin;
+MObject     alembicArchiveNode::aFurBBMax;
+MObject 	alembicArchiveNode::aFurBBSize;
+MObject 	alembicArchiveNode::aFurBB;
+
+MObject     alembicArchiveNode::aBBCenter;
 MObject     alembicArchiveNode::aFurLOD;
 MObject		alembicArchiveNode::aShowBB;
 
@@ -115,56 +111,16 @@ void abcDirtiedCallback( MObject & nodeMO , MPlug & plug, void* data)
 }
 
 void abcChangedCallback( MNodeMessage::AttributeMessage msg, MPlug & plug, MPlug & otherPlug, void* data)
-{/*
-    alembicArchiveNode::alembicArchiveNode *node = (alembicArchiveNode::alembicArchiveNode *)data;
-//    std::cout << "attrChanged: " << node->name() << " - " << plug.name() << "(other: " << otherPlug.name() << " )" << std::endl;
-    if ( ((msg & MNodeMessage::kAttributeSet) || (msg & MNodeMessage::kOtherPlugSet)) && (plug.attribute()==alembicArchiveNode::aAbcFile || plug.attribute()==alembicArchiveNode::aObjectPath)) {//plug.partialName()=="af") {
-//        MString file;
-//        plug.getValue(file);
-
-        MFnDagNode fn( node->thisMObject() );
-        MString file;
-        MPlug fplug  = fn.findPlug( alembicArchiveNode::aAbcFile, true );
-        fplug.getValue(file);
-        // expand env variables
-        file = file.expandFilePath();
-        
-//        std::cout << "assetChanged! " << file << std::endl;
-        
-//        MFnDagNode fn( node->thisMObject() );
-        MString objectPath;
-        MPlug opplug  = fn.findPlug( alembicArchiveNode::aObjectPath, true );
-        opplug.getValue(objectPath);
-
-//        MPlug opplug  = fn.findPlug( alembicArchiveNode::aObjectPath, true );
-//        opplug.getValue(objectPath);
-
-        MString mkey = file+"/"+objectPath;
-        std::string key = mkey.asChar();//node->getSceneKey();
-
-        if (node->m_currscenekey != key) {
-            alembicArchiveNode::abcSceneManager.removeScene(node->m_currscenekey);
-            node->m_currscenekey = "";
-        }
-
-//        if (file != "") {
-            // TODO: check file existance!!
-            alembicArchiveNode::abcSceneManager.addScene(file.asChar(),objectPath.asChar());
-
-            node->m_currscenekey = key;
-//        }
-    }
-*/}
+{
+}
 
 void nodePreRemovalCallback( MObject& obj, void* data)
 {
-//    std::cout << "pre removal" << std::endl;
     alembicArchiveNode::alembicArchiveNode *node = (alembicArchiveNode::alembicArchiveNode *)data;
     alembicArchiveNode::abcSceneManager.removeScene(node->getSceneKey());
 }
 
 alembicArchiveNode::alembicArchiveNode() {
-//    std::cout << "class creator" << std::endl;
     m_bbmode = 0;
     m_currscenekey = "";
     m_abcdirty = false;
@@ -221,10 +177,11 @@ void alembicArchiveNode::draw( M3dView& view,
 
     MColor col;
     if (status == 8) {
-//        col = colorRGB( status );
+        col = MColor(0.8,1.0,0.8);
+    } else if (status == 0) {
         col = MColor(0.25,1.0,0.5);
     } else {
-        col = MColor(0.7,0.5,0.5);
+    	col = MColor(0.7,0.5,0.5);
     }
 
     view.beginGL();
@@ -272,10 +229,16 @@ void alembicArchiveNode::draw( M3dView& view,
     bool doBB = bbPlug.asBool() ;
 
     if (doBB){
-    	MPlug lodPlug( thisNode, aLodBB );
+
+    	MBoundingBox bb = boundingBox();
+
+    	//MPlug geoBBPlug( thisNode, aBB );
     	MVector bmin,bmax;
-    	st = bbValue();
-    	drawABox(lbmin, lbmax);
+    	bmin=bb.min();
+    	bmax=bb.max();
+
+    	//st = bbValue(geoBBPlug, bmin,bmax);
+    	drawABox(bmin, bmax);
 
     }
 
@@ -345,70 +308,47 @@ MStatus alembicArchiveNode::compute( const MPlug& plug, MDataBlock& data )
 
 
     
-    if(plug == aBBMinX || plug == aBBMinY || plug == aBBMinZ ||
-        plug == aBBMaxX || plug == aBBMaxY || plug == aBBMaxZ )
+    if(plug == aBBMin || plug == aBBMax || plug == aBB || plug == aBBSize)
     {
         MBoundingBox bb = boundingBox();
 
-        MDataHandle tmpData = data.outputValue(aBBMinX);
-        tmpData.setFloat(bb.min().x);
+        MDataHandle tmpData = data.outputValue(aBBMin);
+        tmpData.set3Double(bb.min().x,bb.min().y,bb.min().z);
         tmpData.setClean();
-        tmpData = data.outputValue(aBBMinY);
-        tmpData.setFloat(bb.min().y);
+        tmpData = data.outputValue(aBBMax);
+        tmpData.set3Double(bb.max().x,bb.max().y,bb.max().z);
         tmpData.setClean();
-        tmpData = data.outputValue(aBBMinZ);
-        tmpData.setFloat(bb.min().z);
-        tmpData.setClean();
-        tmpData = data.outputValue(aBBMaxX);
-        tmpData.setFloat(bb.max().x);
-        tmpData.setClean();
-        tmpData = data.outputValue(aBBMaxY);
-        tmpData.setFloat(bb.max().y);
-        tmpData.setClean();
-        tmpData = data.outputValue(aBBMaxZ);
-        tmpData.setFloat(bb.max().z);
-        tmpData.setClean();
+
+        cout << "just did something!! :D" << endl;
+
     }
 
-    if(plug == aFurBBMinX || plug == aFurBBMinY || plug == aFurBBMinZ ||
-        plug == aFurBBMaxX || plug == aFurBBMaxY || plug == aFurBBMaxZ )
+    if(plug == aFurBBMin || plug == aFurBBMax )
     {
         MBoundingBox bb = boundingBox();
 
-        MDataHandle tmpData = data.outputValue(aFurBBMinX);
-        tmpData.setFloat(bb.min().x-furBbPad);
+        MDataHandle tmpData = data.outputValue(aFurBBMin);
+        tmpData.set3Double(bb.min().x-furBbPad,
+        		bb.min().y-furBbPad,
+        		bb.min().z-furBbPad);
         tmpData.setClean();
-        tmpData = data.outputValue(aFurBBMinY);
-        tmpData.setFloat(bb.min().y-furBbPad);
-        tmpData.setClean();
-        tmpData = data.outputValue(aFurBBMinZ);
-        tmpData.setFloat(bb.min().z-furBbPad);
-        tmpData.setClean();
-        tmpData = data.outputValue(aFurBBMaxX);
-        tmpData.setFloat(bb.max().x+furBbPad);
-        tmpData.setClean();
-        tmpData = data.outputValue(aFurBBMaxY);
-        tmpData.setFloat(bb.max().y+furBbPad);
-        tmpData.setClean();
-        tmpData = data.outputValue(aFurBBMaxZ);
-        tmpData.setFloat(bb.max().z+furBbPad);
+        tmpData = data.outputValue(aFurBBMax);
+        tmpData.set3Double(bb.max().x+furBbPad,
+        		bb.max().y+furBbPad,
+        		bb.max().z+furBbPad);
         tmpData.setClean();
     }
 
-    if(plug == aBBCenterX || plug == aBBCenterY || plug == aBBCenterZ )
+    if(plug == aBBCenter )
     {
         m_bbmode = 1; // switch this on for a sec
 
         MBoundingBox bb = boundingBox();
 
-        MDataHandle tmpData = data.outputValue(aBBCenterX);
-        tmpData.setFloat((bb.min().x+bb.max().x)/2.0);
-        tmpData.setClean();
-        tmpData = data.outputValue(aBBCenterY);
-        tmpData.setFloat((bb.min().y+bb.max().y)/2.0);
-        tmpData.setClean();
-        tmpData = data.outputValue(aBBCenterZ);
-        tmpData.setFloat((bb.min().z+bb.max().z)/2.0);
+        MDataHandle tmpData = data.outputValue(aBBCenter);
+        tmpData.set3Double((bb.min().x+bb.max().x)/2.0,
+        		(bb.min().y+bb.max().y)/2.0,
+        		(bb.min().z+bb.max().z)/2.0);
         tmpData.setClean();
 
         m_bbmode = 0; // back to default
@@ -440,6 +380,23 @@ MStatus alembicArchiveNode::compute( const MPlug& plug, MDataBlock& data )
         tmpData.setClean();
     }
 
+    if( plug == aShowBB )
+    {
+
+        MBoundingBox bb = boundingBox();
+
+        MString info = "Viewing BoundingBox";
+            info +=  bb.min().x;
+            info +=  bb.min().y;
+            info +=  bb.min().z;
+            info +=  bb.max().x;
+            info +=  bb.max().y;
+            info +=  bb.max().z;
+
+            MGlobal::displayInfo(info);
+
+
+    }
 
     return MS::kSuccess;
 }
@@ -502,6 +459,7 @@ MStatus alembicArchiveNode::initialize()
     MFnNumericAttribute nAttr;
     MFnMessageAttribute mAttr;
     MFnUnitAttribute uAttr;
+	MFnCompoundAttribute cAttr;
     MStatus             stat;
 
     aAbcFile = tAttr.create( "abcFile", "af", MFnStringData::kString );
@@ -552,89 +510,66 @@ MStatus alembicArchiveNode::initialize()
 
 
 
-    aBBMinX = nAttr.create( "bbMinX", "bbminx", MFnNumericData::kFloat);
+    aBBMin = nAttr.create( "bbMin", "bbmin", MFnNumericData::k3Double);
     nAttr.setStorable(false);
     nAttr.setWritable(true);
     nAttr.setReadable(true);
     nAttr.setHidden(true);
-    aBBMinY = nAttr.create( "bbMinY", "bbminy", MFnNumericData::kFloat);
+    aBBMax = nAttr.create( "bbMax", "bbmax", MFnNumericData::k3Double);
     nAttr.setStorable(false);
     nAttr.setWritable(true);
     nAttr.setReadable(true);
     nAttr.setHidden(true);
-    aBBMinZ = nAttr.create( "bbMinZ", "bbminz", MFnNumericData::kFloat);
+    aBBSize = nAttr.create( "bbSize", "bbs", MFnNumericData::k3Double);
     nAttr.setStorable(false);
     nAttr.setWritable(true);
     nAttr.setReadable(true);
     nAttr.setHidden(true);
-    aBBMaxX = nAttr.create( "bbMaxX", "bbmaxx", MFnNumericData::kFloat);
-    nAttr.setStorable(false);
-    nAttr.setWritable(true);
-    nAttr.setReadable(true);
-    nAttr.setHidden(true);
-    aBBMaxY = nAttr.create( "bbMaxY", "bbmaxy", MFnNumericData::kFloat);
-    nAttr.setStorable(false);
-    nAttr.setWritable(true);
-    nAttr.setReadable(true);
-    nAttr.setHidden(true);
-    aBBMaxZ = nAttr.create( "bbMaxZ", "bbmaxz", MFnNumericData::kFloat);
-    nAttr.setStorable(false);
-    nAttr.setWritable(true);
-    nAttr.setReadable(true);
-    nAttr.setHidden(true);
+
+
+	aBB = cAttr.create("boundingBox", "bb");
+	cAttr.addChild(aBBMin);
+	cAttr.addChild(aBBMax);
+	cAttr.addChild(aBBSize);
+	cAttr.setStorable(true);
+	cAttr.setHidden(false);
+	stat = addAttribute(aBB);
 
 
     aFurBBPad = nAttr.create( "furBbPad", "fbbpad", MFnNumericData::kFloat);
     nAttr.setStorable(true);
     nAttr.setKeyable(true);
+	stat = addAttribute(aFurBBPad);
 
-    aFurBBMinX = nAttr.create( "furBbMinX", "fbbminx", MFnNumericData::kFloat);
+    aFurBBMin = nAttr.create( "furBbMin", "fbbmin", MFnNumericData::k3Double);
     nAttr.setStorable(false);
     nAttr.setWritable(true);
     nAttr.setReadable(true);
     nAttr.setHidden(true);
-    aFurBBMinY = nAttr.create( "furBbMinY", "fbbminy", MFnNumericData::kFloat);
+    aFurBBMax = nAttr.create( "furBbMax", "fbbmax", MFnNumericData::k3Double);
     nAttr.setStorable(false);
     nAttr.setWritable(true);
     nAttr.setReadable(true);
     nAttr.setHidden(true);
-    aFurBBMinZ = nAttr.create( "furBbMinZ", "fbbminz", MFnNumericData::kFloat);
+    aFurBBSize = nAttr.create( "furBbSize", "fbbs", MFnNumericData::k3Double);
     nAttr.setStorable(false);
     nAttr.setWritable(true);
     nAttr.setReadable(true);
     nAttr.setHidden(true);
-    aFurBBMaxX = nAttr.create( "furBbMaxX", "fbbmaxx", MFnNumericData::kFloat);
-    nAttr.setStorable(false);
-    nAttr.setWritable(true);
-    nAttr.setReadable(true);
-    nAttr.setHidden(true);
-    aFurBBMaxY = nAttr.create( "furBbMaxY", "fbbmaxy", MFnNumericData::kFloat);
-    nAttr.setStorable(false);
-    nAttr.setWritable(true);
-    nAttr.setReadable(true);
-    nAttr.setHidden(true);
-    aFurBBMaxZ = nAttr.create( "furBbMaxZ", "fbbmaxz", MFnNumericData::kFloat);
-    nAttr.setStorable(false);
-    nAttr.setWritable(true);
-    nAttr.setReadable(true);
-    nAttr.setHidden(true);
+	aFurBB = cAttr.create("furBoundingBox", "fbb");
+	cAttr.addChild(aFurBBMin);
+	cAttr.addChild(aFurBBMax);
+	cAttr.addChild(aFurBBSize);
+	cAttr.setStorable(true);
+	cAttr.setHidden(false);
+	stat = addAttribute(aFurBB);
 
-    aBBCenterX = nAttr.create( "bbCenterX", "bbcx", MFnNumericData::kFloat);
+    aBBCenter = nAttr.create( "bbCenter", "bbc", MFnNumericData::k3Double);
     nAttr.setStorable(false);
     nAttr.setWritable(true);
     nAttr.setReadable(true);
     nAttr.setHidden(true);
-    aBBCenterY = nAttr.create( "bbCenterY", "bbcy", MFnNumericData::kFloat);
-    nAttr.setStorable(false);
-    nAttr.setWritable(true);
-    nAttr.setReadable(true);
-    nAttr.setHidden(true);
-    aBBCenterZ = nAttr.create( "bbCenterZ", "bbcz", MFnNumericData::kFloat);
-    nAttr.setStorable(false);
-    nAttr.setWritable(true);
-    nAttr.setReadable(true);
-    nAttr.setHidden(true);
-
+	stat = addAttribute(aBBCenter);
 
 
     aFurLOD = nAttr.create( "furLOD", "flod", MFnNumericData::kFloat, 1.0);
@@ -670,133 +605,74 @@ MStatus alembicArchiveNode::initialize()
     addAttribute( aShutterClose );
     addAttribute( aOutFps );
     addAttribute( aOutFrame );
-    addAttribute( aBBMinX );
-    addAttribute( aBBMinY );
-    addAttribute( aBBMinZ );
-    addAttribute( aBBMaxX );
-    addAttribute( aBBMaxY );
-    addAttribute( aBBMaxZ );
+//    addAttribute( aBBMin );
+//    addAttribute( aBBMax );
+//    addAttribute( aBBSize );
 
     addAttribute( aFurBBPad );
-    addAttribute( aFurBBMinX );
-    addAttribute( aFurBBMinY );
-    addAttribute( aFurBBMinZ );
-    addAttribute( aFurBBMaxX );
-    addAttribute( aFurBBMaxY );
-    addAttribute( aFurBBMaxZ );
+//    addAttribute( aFurBBMin );
+//    addAttribute( aFurBBMax );
+//    addAttribute( aFurBBSize );
 
-    addAttribute( aBBCenterX );
-    addAttribute( aBBCenterY );
-    addAttribute( aBBCenterZ );
+    addAttribute( aBBCenter );
 
     addAttribute( aFurLOD );
 
     addAttribute( aShowBB );
 
 
-    attributeAffects( aAbcFile, aBBMinX );
-    attributeAffects( aAbcFile, aBBMinY );
-    attributeAffects( aAbcFile, aBBMinZ );
-    attributeAffects( aAbcFile, aBBMaxX );
-    attributeAffects( aAbcFile, aBBMaxY );
-    attributeAffects( aAbcFile, aBBMaxZ );
-    attributeAffects( aAbcFile, aFurBBMinX );
-    attributeAffects( aAbcFile, aFurBBMinY );
-    attributeAffects( aAbcFile, aFurBBMinZ );
-    attributeAffects( aAbcFile, aFurBBMaxX );
-    attributeAffects( aAbcFile, aFurBBMaxY );
-    attributeAffects( aAbcFile, aFurBBMaxZ );
-    attributeAffects( aAbcFile, aBBCenterX );
-    attributeAffects( aAbcFile, aBBCenterY );
-    attributeAffects( aAbcFile, aBBCenterZ );
+    attributeAffects( aAbcFile, aBBMin );
+    attributeAffects( aAbcFile, aBBMax );
+    attributeAffects( aAbcFile, aBBSize );
+    attributeAffects( aAbcFile, aBB );
+    attributeAffects( aAbcFile, aShowBB );
+    attributeAffects( aAbcFile, aFurBBMin );
+    attributeAffects( aAbcFile, aFurBBMax );
+    attributeAffects( aAbcFile, aFurBB );
+    attributeAffects( aAbcFile, aBBCenter );
 
-    attributeAffects( aObjectPath, aBBMinX );
-    attributeAffects( aObjectPath, aBBMinY );
-    attributeAffects( aObjectPath, aBBMinZ );
-    attributeAffects( aObjectPath, aBBMaxX );
-    attributeAffects( aObjectPath, aBBMaxY );
-    attributeAffects( aObjectPath, aBBMaxZ );
-    attributeAffects( aObjectPath, aFurBBMinX );
-    attributeAffects( aObjectPath, aFurBBMinY );
-    attributeAffects( aObjectPath, aFurBBMinZ );
-    attributeAffects( aObjectPath, aFurBBMaxX );
-    attributeAffects( aObjectPath, aFurBBMaxY );
-    attributeAffects( aObjectPath, aFurBBMaxZ );
-    attributeAffects( aObjectPath, aBBCenterX );
-    attributeAffects( aObjectPath, aBBCenterY );
-    attributeAffects( aObjectPath, aBBCenterZ );
+    attributeAffects( aObjectPath, aBBMin );
+    attributeAffects( aObjectPath, aBBMax );
+    attributeAffects( aObjectPath, aFurBBMin );
+    attributeAffects( aObjectPath, aFurBBMax );;
+    attributeAffects( aObjectPath, aBBCenter );
+    attributeAffects( aObjectPath, aShowBB );
 
 
     attributeAffects( aTime, aOutFps );
     attributeAffects( aTime, aOutFrame );
-    attributeAffects( aTime, aBBMinX );
-    attributeAffects( aTime, aBBMinY );
-    attributeAffects( aTime, aBBMinZ );
-    attributeAffects( aTime, aBBMaxX );
-    attributeAffects( aTime, aBBMaxY );
-    attributeAffects( aTime, aBBMaxZ );
-    attributeAffects( aTime, aFurBBMinX );
-    attributeAffects( aTime, aFurBBMinY );
-    attributeAffects( aTime, aFurBBMinZ );
-    attributeAffects( aTime, aFurBBMaxX );
-    attributeAffects( aTime, aFurBBMaxY );
-    attributeAffects( aTime, aFurBBMaxZ );
-    attributeAffects( aTime, aBBCenterX );
-    attributeAffects( aTime, aBBCenterY );
-    attributeAffects( aTime, aBBCenterZ );
+    attributeAffects( aTime, aBBMin );
+    attributeAffects( aTime, aBBMax );
+    attributeAffects( aTime, aFurBBMin );
+    attributeAffects( aTime, aFurBBMax );
+    attributeAffects( aTime, aBBCenter );
+    attributeAffects( aTime, aShowBB );
 
     attributeAffects( aTimeOffset, aOutFps );
     attributeAffects( aTimeOffset, aOutFrame );
-    attributeAffects( aTimeOffset, aBBMinX );
-    attributeAffects( aTimeOffset, aBBMinY );
-    attributeAffects( aTimeOffset, aBBMinZ );
-    attributeAffects( aTimeOffset, aBBMaxX );
-    attributeAffects( aTimeOffset, aBBMaxY );
-    attributeAffects( aTimeOffset, aBBMaxZ );
-    attributeAffects( aTimeOffset, aFurBBMinX );
-    attributeAffects( aTimeOffset, aFurBBMinY );
-    attributeAffects( aTimeOffset, aFurBBMinZ );
-    attributeAffects( aTimeOffset, aFurBBMaxX );
-    attributeAffects( aTimeOffset, aFurBBMaxY );
-    attributeAffects( aTimeOffset, aFurBBMaxZ );
-    attributeAffects( aTimeOffset, aBBCenterX );
-    attributeAffects( aTimeOffset, aBBCenterY );
-    attributeAffects( aTimeOffset, aBBCenterZ );
+    attributeAffects( aTimeOffset, aBBMin );
+    attributeAffects( aTimeOffset, aBBMax );
+    attributeAffects( aTimeOffset, aFurBBMin );
+    attributeAffects( aTimeOffset, aFurBBMax );
+    attributeAffects( aTimeOffset, aBBCenter );
+    attributeAffects( aTimeOffset, aShowBB );
     
     attributeAffects( aShutterOpen, aOutFps );
-    attributeAffects( aShutterOpen, aBBMinX );
-    attributeAffects( aShutterOpen, aBBMinY );
-    attributeAffects( aShutterOpen, aBBMinZ );
-    attributeAffects( aShutterOpen, aBBMaxX );
-    attributeAffects( aShutterOpen, aBBMaxY );
-    attributeAffects( aShutterOpen, aBBMaxZ );
-    attributeAffects( aShutterOpen, aFurBBMinX );
-    attributeAffects( aShutterOpen, aFurBBMinY );
-    attributeAffects( aShutterOpen, aFurBBMinZ );
-    attributeAffects( aShutterOpen, aFurBBMaxX );
-    attributeAffects( aShutterOpen, aFurBBMaxY );
-    attributeAffects( aShutterOpen, aFurBBMaxZ );
+    attributeAffects( aShutterOpen, aBBMin );
+    attributeAffects( aShutterOpen, aBBMax );
+    attributeAffects( aShutterOpen, aFurBBMin );
+    attributeAffects( aShutterOpen, aFurBBMax );
+    attributeAffects( aShutterOpen, aShowBB );
 
     attributeAffects( aShutterClose, aOutFps );
-    attributeAffects( aShutterClose, aBBMinX );
-    attributeAffects( aShutterClose, aBBMinY );
-    attributeAffects( aShutterClose, aBBMinZ );
-    attributeAffects( aShutterClose, aBBMaxX );
-    attributeAffects( aShutterClose, aBBMaxY );
-    attributeAffects( aShutterClose, aBBMaxZ );
-    attributeAffects( aShutterClose, aFurBBMinX );
-    attributeAffects( aShutterClose, aFurBBMinY );
-    attributeAffects( aShutterClose, aFurBBMinZ );
-    attributeAffects( aShutterClose, aFurBBMaxX );
-    attributeAffects( aShutterClose, aFurBBMaxY );
-    attributeAffects( aShutterClose, aFurBBMaxZ );
+    attributeAffects( aShutterClose, aBBMin );
+    attributeAffects( aShutterClose, aBBMax );
+    attributeAffects( aShutterClose, aFurBBMin );
+    attributeAffects( aShutterClose, aFurBBMax );
+    attributeAffects( aShutterOpen, aShowBB );
 
-    attributeAffects( aFurBBPad, aFurBBMinX );
-    attributeAffects( aFurBBPad, aFurBBMinY );
-    attributeAffects( aFurBBPad, aFurBBMinZ );
-    attributeAffects( aFurBBPad, aFurBBMaxX );
-    attributeAffects( aFurBBPad, aFurBBMaxY );
-    attributeAffects( aFurBBPad, aFurBBMaxZ );
+    attributeAffects( aFurBBPad, aFurBBMin );
+    attributeAffects( aFurBBPad, aFurBBMax );
 
     return MS::kSuccess;
 
@@ -885,16 +761,6 @@ std::string alembicArchiveNode::getSceneKey() const
     plug.getValue( objectPath );
 
     return std::string((abcfile+"/"+objectPath).asChar());
-}
-
-int alembicArchiveNode::getDisplayBoundingBox() const
-{
-    MFnDagNode fn( thisMObject() );
-
-    MPlug plug  = fn.findPlug( aShowBB );
-    bool doBB;
-
-    return doBB;
 }
 
 int alembicArchiveNode::archiveAttribs(	const MStringArray & shapeNames) const {
@@ -1020,21 +886,9 @@ MStatus alembicArchiveNode::archiveShadersAndAttribs() const {
 // cerr << "in archiveShadersAndAttribs" << endl;
 // we need to dig down to every shape contained within or under the sets or nodes connected to the lod geometry plug
 	MStatus st = MS::kSuccess;
-	MPlug geomPlug( thisMObject(), aLodGeometry );
 	MSelectionList allShapesList;
-	unsigned n = geomPlug.numElements();
-//MStringArray lodNames;
-	for (unsigned i = 0;i<n;i++){
-		MPlug tmpPlug = geomPlug.elementByPhysicalIndex(i);
-		MPlug setPlug =  tmpPlug.child(aLodGeometrySet,&st);
-		allShapesList.merge(getShapesFromPlug(setPlug));
-	}
-	MStringArray shapeNames;
-	allShapesList.getSelectionStrings(shapeNames);
-	unsigned ns = shapeNames.length();
-
-	archiveAttribs(shapeNames);
-	archiveShaders(shapeNames);
+	//archiveAttribs(thisMObject());
+	//archiveShaders(thisMObject());
 
 	return st;
 }
