@@ -510,24 +510,24 @@ MStatus alembicArchiveNode::initialize()
 
 
 
-    aBBMin = nAttr.create( "bbMin", "bbmin", MFnNumericData::k3Double);
+    aBBMin = nAttr.create( "geoBBMin", "gbbmin", MFnNumericData::k3Double);
     nAttr.setStorable(false);
     nAttr.setWritable(true);
     nAttr.setReadable(true);
     nAttr.setHidden(true);
-    aBBMax = nAttr.create( "bbMax", "bbmax", MFnNumericData::k3Double);
+    aBBMax = nAttr.create( "geoBBMax", "gbbmax", MFnNumericData::k3Double);
     nAttr.setStorable(false);
     nAttr.setWritable(true);
     nAttr.setReadable(true);
     nAttr.setHidden(true);
-    aBBSize = nAttr.create( "bbSize", "bbs", MFnNumericData::k3Double);
+    aBBSize = nAttr.create( "geoBBSize", "gbbs", MFnNumericData::k3Double);
     nAttr.setStorable(false);
     nAttr.setWritable(true);
     nAttr.setReadable(true);
     nAttr.setHidden(true);
 
 
-	aBB = cAttr.create("boundingBox", "bb");
+	aBB = cAttr.create("geoBoundingBox", "gbb");
 	cAttr.addChild(aBBMin);
 	cAttr.addChild(aBBMax);
 	cAttr.addChild(aBBSize);

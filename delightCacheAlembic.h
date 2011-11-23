@@ -1,5 +1,5 @@
-#ifndef	__delightCacheFlock_H__
-#define	__delightCacheFlock_H__
+#ifndef	__delightCacheAlembic_H__
+#define	__delightCacheAlembic_H__
 
 #include <maya/MPxCommand.h>
 #include <maya/MSyntax.h>
@@ -31,16 +31,16 @@
 
 /////////////////////////////////////////
 //
-//	delightCacheFlock
+//	delightCacheAlembic
 //		: MPxCommand
 //
-class delightCacheFlock : public MPxCommand
+class delightCacheAlembic : public MPxCommand
 
 {
 	public:
 	
-	delightCacheFlock() {}
-	virtual ~delightCacheFlock() {}
+	delightCacheAlembic() {}
+	virtual ~delightCacheAlembic() {}
 	
 	MStatus doIt( const MArgList& args );
 	
@@ -50,5 +50,5 @@ class delightCacheFlock : public MPxCommand
 
 };
 
-#endif	//	!__delightCacheFlock_H__
+#endif	//	!__delightCacheAlembic_H__
 

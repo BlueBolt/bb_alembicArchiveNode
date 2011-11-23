@@ -10,17 +10,17 @@
 #include <maya/MFnDependencyNode.h>
 #include <maya/MDagPath.h>
 
-#include <delightCacheFlock.h>
-#include <flockShape.h>
+#include <delightCacheAlembic.h>
+#include <alembicArchiveNode.h>
 
 
 //	static
-void* delightCacheFlock::creator()
+void* delightCacheAlembic::creator()
 {
-	return new delightCacheFlock();
+	return new delightCacheAlembic();
 }
 
-MSyntax delightCacheFlock::newSyntax()
+MSyntax delightCacheAlembic::newSyntax()
 {
 	MSyntax syn;
 
@@ -42,10 +42,10 @@ MSyntax delightCacheFlock::newSyntax()
 
 
 
-MStatus delightCacheFlock::doIt( const MArgList& args )
+MStatus delightCacheAlembic::doIt( const MArgList& args )
 {
 	MStatus st;
-	MString method("delightCacheFlock::doIt");
+	MString method("delightCacheAlembic::doIt");
 	
 	// get the node if one is specified
 	MSelectionList list;
@@ -55,7 +55,7 @@ MStatus delightCacheFlock::doIt( const MArgList& args )
 	MObject  rigInstObject;
 	MDagPath rigInstDagPath;
 	MFnDependencyNode rigInstFn;
-	flockShape * flockShapeNode = 0;
+	alembicArchiveNode * alembicArchive = 0;
 	MString fullPathName;
 	
 	for (;! iter.isDone() ; iter.next()) {

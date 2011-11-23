@@ -10,17 +10,17 @@
 #include <maya/MFnDependencyNode.h>
 #include <maya/MDagPath.h>
 
-#include <delightOutputFlock.h>
-#include <flockShape.h>
+#include <delightOutputAlembic.h>
+#include <alembicArchiveNode.h>
 
 
 //	static
-void* delightOutputFlock::creator()
+void* delightOutputAlembic::creator()
 {
-	return new delightOutputFlock();
+	return new delightOutputAlembic();
 }
 
-MSyntax delightOutputFlock::newSyntax()
+MSyntax delightOutputAlembic::newSyntax()
 {
 	MSyntax syn;
 
@@ -30,10 +30,10 @@ MSyntax delightOutputFlock::newSyntax()
 	return syn;
 }
 
-MStatus delightOutputFlock::doIt( const MArgList& args )
+MStatus delightOutputAlembic::doIt( const MArgList& args )
 {
 	MStatus st;
-	MString method("delightOutputFlock::doIt");
+	MString method("delightOutputAlembic::doIt");
 	
 	// get the node if one is specified
 	MSelectionList list;
@@ -43,29 +43,29 @@ MStatus delightOutputFlock::doIt( const MArgList& args )
 	MObject  rigInstObject;
 	MDagPath rigInstDagPath;
 	MFnDependencyNode rigInstFn;
-	flockShape * flockShapeNode = 0;
+	alembicArchiveNode * alembicArchiveNodeObject = 0;
 	MString fullPathName;
 	
 	for (;! iter.isDone() ; iter.next()) {
 		iter.getDependNode( rigInstObject );
 		rigInstFn.setObject( rigInstObject );
-		if (rigInstFn.typeId() == flockShape::id) {
+		if (rigInstFn.typeId() == alembicArchiveNode::id) {
 			iter.getDagPath( rigInstDagPath );
 			fullPathName = rigInstDagPath.fullPathName();
-			flockShapeNode =  (flockShape*)rigInstFn.userNode();
+			alembicArchiveNodeObject =  (alembicArchiveNode*)rigInstFn.userNode();
 			break;
 		}
 	}
 	
-	if (!(flockShapeNode)) {
-		displayError("No flockShape node specified");
+	if (!(alembicArchiveNodeObject)) {
+		displayError("No alembicArchiveNode node specified");
 		return MS::kUnknownParameter;
 	}
 
-	st = flockShapeNode->removeCache();	er;
-	st = flockShapeNode->addSlice(1.0f);er;
-	st = flockShapeNode->emitCache();er;
-	st = flockShapeNode->removeCache();	er;
+	st = alembicArchiveNodeObject->removeCache();	er;
+	st = alembicArchiveNodeObject->addSlice(1.0f);er;
+	st = alembicArchiveNodeObject->emitCache();er;
+	st = alembicArchiveNodeObject->removeCache();	er;
 
 	return MS::kSuccess;
 }

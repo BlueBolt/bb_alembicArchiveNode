@@ -1,5 +1,5 @@
-#ifndef	__delightOutputFlock_H__
-#define	__delightOutputFlock_H__
+#ifndef	__delightOutputAlembic_H__
+#define	__delightOutputAlembic_H__
 
 #include <maya/MPxCommand.h>
 #include <maya/MSyntax.h>
@@ -9,16 +9,16 @@
 
 /////////////////////////////////////////
 //
-//	delightOutputFlock
+//	delightOutputAlembic
 //		: MPxCommand
 //
-class delightOutputFlock : public MPxCommand
+class delightOutputAlembic : public MPxCommand
 
 {
 	public:
 	
-	delightOutputFlock() {}
-	virtual ~delightOutputFlock() {}
+	delightOutputAlembic() {}
+	virtual ~delightOutputAlembic() {}
 	
 	MStatus doIt( const MArgList& args );
 	
@@ -28,5 +28,5 @@ class delightOutputFlock : public MPxCommand
 
 };
 
-#endif	//	!__delightOutputFlock_H__
+#endif	//	!__delightOutputAlembic_H__
 

@@ -93,3 +93,6 @@ TARGET_LINK_LIBRARIES( alembicArchiveNode
 
 INSTALL( TARGETS alembicArchiveNode
          DESTINATION maya/$ENV{MAYA_VERSION}/plug-ins )
+
+
+

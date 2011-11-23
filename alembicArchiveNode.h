@@ -96,6 +96,9 @@ public:
     
     static  MObject     aShowBB;
 //    static  MObject     aShowFurBB;
+//    static  MObject     aPolyAsSubD;
+//    static  MObject     aExportFaceIds;
+//    static  MObject     aFaceIdAttributeName;
 
     static  MTypeId     id;
     
