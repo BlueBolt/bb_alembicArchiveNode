@@ -27,6 +27,7 @@
 #include <maya/MBoundingBox.h>
 #include <maya/MString.h>
 #include <maya/MStringArray.h>
+#include <maya/MFloatVector.h>
 #include <maya/MIntArray.h>
 #include <maya/MDoubleArray.h>
 #include <maya/MFnStringData.h>
@@ -37,7 +38,7 @@
 #include <maya/MItSelectionList.h>
 
 //include the renderman interface header for the procedural stuff
-#include "ri.h"
+#include <ri.h>
 
 #include <iostream>
 
@@ -68,6 +69,8 @@ public:
         
     std::string getSceneKey() const;
 
+	MStatus emitCache(float relativeFrame=0.0f) ;
+
 public:
 
     static  MObject     aAbcFile; 
@@ -95,8 +98,9 @@ public:
     static  MObject     aFurLOD;
     
     static  MObject     aShowBB;
+    static  MObject     aFlipV;
 //    static  MObject     aShowFurBB;
-//    static  MObject     aPolyAsSubD;
+    static  MObject     aPolyAsSubD;
 //    static  MObject     aExportFaceIds;
 //    static  MObject     aFaceIdAttributeName;
 

@@ -21,7 +21,9 @@ global proc AEalembicArchiveNodeTemplate (string $nodeName) {
 	editorTemplate -addControl "shutterOpen";		
 	editorTemplate -addControl "shutterClose";		
 	editorTemplate -addControl "furLOD";			
-	editorTemplate -addControl "furBbPad";		
+	editorTemplate -addControl "furBbPad";			
+	editorTemplate -addControl "flipV";			
+	editorTemplate -addControl "polyAsSubD";		
 	
 	editorTemplate -endLayout;
 	

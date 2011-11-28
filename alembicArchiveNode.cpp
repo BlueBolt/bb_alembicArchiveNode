@@ -25,7 +25,7 @@
 #include <map>
 
 #include "timer.h"
-
+#include "errorMacros.h"
 
 #include "boost/foreach.hpp"
 
@@ -55,6 +55,9 @@ MObject     alembicArchiveNode::aBBCenter;
 MObject     alembicArchiveNode::aFurLOD;
 MObject		alembicArchiveNode::aShowBB;
 
+MObject		alembicArchiveNode::aFlipV;
+MObject		alembicArchiveNode::aPolyAsSubD;
+
 
 SimpleAbcViewer::SceneState alembicArchiveNode::abcSceneState;
 SimpleAbcViewer::SceneManager alembicArchiveNode::abcSceneManager;
@@ -73,7 +76,7 @@ void updateAbc(const void* data)
     alembicArchiveNode::alembicArchiveNode *node = (alembicArchiveNode::alembicArchiveNode *)data;
 
     MFnDagNode fn( node->thisMObject() );
-//        std::cout << "plugDirtied: " << fn.name() << " " << plug.name() << " = " << plug.asString() << std::endl;
+   //     std::cout << "plugDirtied: " << fn.name() << " " << plug.name() << " = " << plug.asString() << std::endl;
     MString file;
     MPlug fplug  = fn.findPlug( alembicArchiveNode::aAbcFile );
     fplug.getValue(file);
@@ -111,7 +114,46 @@ void abcDirtiedCallback( MObject & nodeMO , MPlug & plug, void* data)
 }
 
 void abcChangedCallback( MNodeMessage::AttributeMessage msg, MPlug & plug, MPlug & otherPlug, void* data)
-{
+{/*
+    animaAlembicHolder::animaAlembicHolder *node = (animaAlembicHolder::animaAlembicHolder *)data;
+//    std::cout << "attrChanged: " << node->name() << " - " << plug.name() << "(other: " << otherPlug.name() << " )" << std::endl;
+    if ( ((msg & MNodeMessage::kAttributeSet) || (msg & MNodeMessage::kOtherPlugSet)) && (plug.attribute()==animaAlembicHolder::aAbcFile || plug.attribute()==animaAlembicHolder::aObjectPath)) {//plug.partialName()=="af") {
+//        MString file;
+//        plug.getValue(file);
+
+        MFnDagNode fn( node->thisMObject() );
+        MString file;
+        MPlug fplug  = fn.findPlug( animaAlembicHolder::aAbcFile, true );
+        fplug.getValue(file);
+        // expand env variables
+        file = file.expandFilePath();
+
+//        std::cout << "assetChanged! " << file << std::endl;
+
+//        MFnDagNode fn( node->thisMObject() );
+        MString objectPath;
+        MPlug opplug  = fn.findPlug( animaAlembicHolder::aObjectPath, true );
+        opplug.getValue(objectPath);
+
+//        MPlug opplug  = fn.findPlug( animaAlembicHolder::aObjectPath, true );
+//        opplug.getValue(objectPath);
+
+        MString mkey = file+"/"+objectPath;
+        std::string key = mkey.asChar();//node->getSceneKey();
+
+        if (node->m_currscenekey != key) {
+            animaAlembicHolder::abcSceneManager.removeScene(node->m_currscenekey);
+            node->m_currscenekey = "";
+        }
+
+//        if (file != "") {
+            // TODO: check file existance!!
+            animaAlembicHolder::abcSceneManager.addScene(file.asChar(),objectPath.asChar());
+
+            node->m_currscenekey = key;
+//        }
+    }
+*/
 }
 
 void nodePreRemovalCallback( MObject& obj, void* data)
@@ -290,23 +332,16 @@ MStatus alembicArchiveNode::compute( const MPlug& plug, MDataBlock& data )
     // update scene if needed
     if (m_abcdirty) updateAbc(this);
 
-
-
-
-    // get attributes
-/*    MDataHandle stringData = data.inputValue(aAbcFile, &returnStatus);
-    if (MS::kSuccess != returnStatus) return returnStatus;
-    MString stringAttr = stringData.asString();  
-
-    MDataHandle booleanData = data.inputValue(aBooleanAttr, &returnStatus);
-    if (MS::kSuccess != returnStatus) return returnStatus;
-    bool booleanAttr = booleanData.asBool();  
-*/
     MDataHandle floatData = data.inputValue(aFurBBPad, &returnStatus);
     if (MS::kSuccess != returnStatus) return returnStatus;
     float furBbPad = floatData.asFloat();  
 
+    if (plug == aAbcFile || plug == aObjectPath ){
 
+
+    	cout << "just did something!! :D" << endl;
+
+    }
     
     if(plug == aBBMin || plug == aBBMax || plug == aBB || plug == aBBSize)
     {
@@ -318,8 +353,6 @@ MStatus alembicArchiveNode::compute( const MPlug& plug, MDataBlock& data )
         tmpData = data.outputValue(aBBMax);
         tmpData.set3Double(bb.max().x,bb.max().y,bb.max().z);
         tmpData.setClean();
-
-        cout << "just did something!! :D" << endl;
 
     }
 
@@ -460,9 +493,15 @@ MStatus alembicArchiveNode::initialize()
     MFnMessageAttribute mAttr;
     MFnUnitAttribute uAttr;
 	MFnCompoundAttribute cAttr;
-    MStatus             stat;
+    MStatus             st;
 
-    aAbcFile = tAttr.create( "abcFile", "af", MFnStringData::kString );
+    MFnStringData fileFnStringData;
+    MObject fileNameDefaultObject = fileFnStringData.create("");
+
+    aAbcFile = tAttr.create("abcFile", "af",
+        MFnData::kString, fileNameDefaultObject);
+
+   // aAbcFile = tAttr.create( "abcFile", "af", MFnStringData::kString );
 //    tAttr.setWritable(true);
 //    tAttr.setReadable(true);
     tAttr.setHidden(false);
@@ -533,13 +572,13 @@ MStatus alembicArchiveNode::initialize()
 	cAttr.addChild(aBBSize);
 	cAttr.setStorable(true);
 	cAttr.setHidden(false);
-	stat = addAttribute(aBB);
+	st = addAttribute(aBB);
 
 
     aFurBBPad = nAttr.create( "furBbPad", "fbbpad", MFnNumericData::kFloat);
     nAttr.setStorable(true);
     nAttr.setKeyable(true);
-	stat = addAttribute(aFurBBPad);
+	st = addAttribute(aFurBBPad);
 
     aFurBBMin = nAttr.create( "furBbMin", "fbbmin", MFnNumericData::k3Double);
     nAttr.setStorable(false);
@@ -562,14 +601,14 @@ MStatus alembicArchiveNode::initialize()
 	cAttr.addChild(aFurBBSize);
 	cAttr.setStorable(true);
 	cAttr.setHidden(false);
-	stat = addAttribute(aFurBB);
+	st = addAttribute(aFurBB);
 
     aBBCenter = nAttr.create( "bbCenter", "bbc", MFnNumericData::k3Double);
     nAttr.setStorable(false);
     nAttr.setWritable(true);
     nAttr.setReadable(true);
     nAttr.setHidden(true);
-	stat = addAttribute(aBBCenter);
+	st = addAttribute(aBBCenter);
 
 
     aFurLOD = nAttr.create( "furLOD", "flod", MFnNumericData::kFloat, 1.0);
@@ -577,9 +616,20 @@ MStatus alembicArchiveNode::initialize()
     nAttr.setKeyable(true);
 
 
-    aShowBB = nAttr.create( "showBoundingBox", "sbb", MFnNumericData::kBoolean, 0, &stat);
+    aShowBB = nAttr.create( "showBoundingBox", "sbb", MFnNumericData::kBoolean, 0, &st);
+    nAttr.setHidden(false);
 	nAttr.setKeyable( true );
-	stat = addAttribute(aShowBB);
+	st = addAttribute(aShowBB);
+
+    aFlipV = nAttr.create( "flipV", "fv", MFnNumericData::kBoolean, 0, &st);
+    nAttr.setHidden(false);
+	nAttr.setKeyable( true );
+	st = addAttribute(aFlipV);
+
+    aPolyAsSubD = nAttr.create( "polyAsSubD", "psd", MFnNumericData::kBoolean, 0, &st);
+    nAttr.setHidden(false);
+	nAttr.setKeyable( true );
+	st = addAttribute(aPolyAsSubD);er;
 
 /*    aMessageAttr = mAttr.create( "messageAttr", "me" );
     mAttr.setWritable(true);
@@ -742,7 +792,7 @@ void alembicArchiveNode::drawABox(const MVector &bmin, const MVector &bmax) {
 
 MStatus alembicArchiveNode::doSomething()
 {
-    MStatus stat;
+    MStatus st;
 
     cout << "just did something!! :D" << endl;
 
@@ -763,133 +813,106 @@ std::string alembicArchiveNode::getSceneKey() const
     return std::string((abcfile+"/"+objectPath).asChar());
 }
 
-int alembicArchiveNode::archiveAttribs(	const MStringArray & shapeNames) const {
+MStatus alembicArchiveNode::emitCache(float relativeFrame)  {
+
+	//if (!hasCache()) return MS::kUnknownParameter;
+
 	MStatus st;
-	unsigned ns = shapeNames.length();
 
-//MStringArray allGeoAttribs;
-	MSelectionList allGeoAttribs; // use a selectionList because it removes duplicates implicitly
-	MStringArray geoAttribs;
+	MObject thisNode = thisMObject();
+	MString thisNodeName = MFnDependencyNode(thisNode).name();
+////////////////get Object Path////////////////////
 
-	for (unsigned i=0;i<ns;i++) {
-		geoAttribs.clear();
+	MPlug objPathPlug( thisNode, aObjectPath );
+	MString objPath;
+	objPathPlug.getValue( objPath );
 
-		MString cmd = "delightNodeQuery -shape \"";
-		cmd += shapeNames[i];
-		cmd += "\" -nodeType \"delightGeoAttribs\" -all";
+	////////////////////////////////////
 
-		st = MGlobal::executeCommand(cmd,geoAttribs);
+	MPlug abcFilePlug( thisNode, aAbcFile );
+	MString abcFile;
+	abcFilePlug.getValue( abcFile );
 
-		unsigned ng = geoAttribs.length();
+	///////////// Get Flip UV ///////////////////////
 
-		for (unsigned j=0;j<ng;j++) {
-			allGeoAttribs.add(geoAttribs[j]);
-		}
+	MPlug flipVPlug( thisNode, aFlipV );
+	bool flipV;
+	flipVPlug.getValue( flipV );
 
+	///////////// Get polyAsSubD ///////////////////////
+
+	MPlug subDPlug( thisNode, aPolyAsSubD );
+	bool subD;
+	subDPlug.getValue( subD );
+
+	///////////// Get shutterOpen ///////////////////////
+
+	MPlug shutterOpenPlug( thisNode, aShutterOpen );
+	float shutterOpen;
+	shutterOpenPlug.getValue( shutterOpen );
+
+	///////////// Get shutterClose ///////////////////////
+
+	MPlug shutterClosePlug( thisNode, aShutterClose );
+	float shutterClose;
+	shutterClosePlug.getValue( shutterClose );
+
+////////////////get Bound////////////////////
+//	MPlug BBPlug( thisNode, aBB );
+//	MVector bmin,bmax;
+//	st= bbValue(BBPlug, bmin, bmax) ;
+
+	MBoundingBox bb = boundingBox();
+
+	//MPlug geoBBPlug( thisNode, aBB );
+	MVector bmin,bmax;
+	bmin=bb.min();
+	bmax=bb.max();
+
+	MFloatVector bminf(bmin);
+	MFloatVector bmaxf(bmax);
+	RtBound bound = { bminf.x, bmaxf.x, bminf.y, bmaxf.y, bminf.z, bmaxf.z } ;
+////////////////////////////////////
+
+	RtString * progData = new RtString[2];
+
+	MString argsString;
+	if (objPath != ""){
+		argsString += "-objectpath ";
+		argsString += objPath;
 	}
-// now we have all the geoAttribs nodes in a selection list
-	allGeoAttribs.getSelectionStrings(geoAttribs);
-	unsigned ng = geoAttribs.length();
-//cerr << "here: " << __LINE__ << endl;
-	for (unsigned j=0;j<ng;j++) {
-	// archive name must not have the namespace, so strip it out
-
-		MString archiveName;
-		MStringArray tmpSA;
-		geoAttribs[j].split(':',tmpSA);
-		archiveName = tmpSA[(tmpSA.length() -1)];
-
-
-		RiArchiveBegin( const_cast <char *>(archiveName.asChar()) , RI_NULL);
-
-		MString outputCmd = "DGA_output( \"";
-		outputCmd += geoAttribs[j];
-		outputCmd += "\",\"\")"; // second argument (renderpass for some legacy sohofx hook) is empty
-
-		st = MGlobal::executeCommand(outputCmd);
-
-		RiArchiveEnd();
-
+	if (flipV){
+		argsString += " -flipv ";
 	}
-	return  ng;
+	if (subD){
+		argsString += " -subd ";
+	}
+	if (shutterOpen != 0.0){
+		argsString += " -shutteropen ";
+		argsString += shutterOpen;
+	}
+	if (shutterClose != 0.0){
+		argsString += " -shutterclose ";
+		argsString += shutterClose;
+	}
+	argsString += " -filename ";
+	argsString += abcFile;
+	argsString += " -frame ";
+	argsString += relativeFrame;
+
+ 	//cerr << "argsString :: " <<  argsString << endl;
+
+	//st = createProgramStrings(geomPlug,progStrings, detailRanges, lodSetNames, blurSamples, relativeFrame) ;
+	progData[0] = "AlembicRiProcedural";
+	progData[1] = argsString.asChar();
+
+	RiAttributeBegin();
+	RiProcedural(progData,bound,RiProcDynamicLoad,RiProcFree);
+	RiAttributeEnd();
+
+
+	return MS::kSuccess;
+
 }
 
-int alembicArchiveNode::archiveShaders(	const MStringArray & shapeNames) const {
-	MStatus st;
-//cerr << "here: " << __LINE__ << endl;
-	unsigned ns = shapeNames.length();
-//MStringArray allGeoAttribs;
-	unsigned ts;
-//cerr << "here: " << __LINE__ << endl;
-	MStringArray shaderTypes;
-	shaderTypes.append("surface");
-	shaderTypes.append("displacement");
-	shaderTypes.append("atmosphere");
-	shaderTypes.append("interior");
-// cerr << "here: " << __LINE__ << endl;
-
-	for (unsigned t=0;t<4;t++) {
-
-		MSelectionList allShaders; // use a selectionList because it removes duplicates implicitly
-		MStringArray allShaderStrings; // use a selectionList because it removes duplicates implicitly
-
-		for (unsigned i=0;i<ns;i++) {
-			MString shader;
-
-
-			MString cmd = "delightNodeQuery -shape \"";
-			cmd += shapeNames[i];
-			cmd += "\" -nodeType \"";
-			cmd += shaderTypes[t];
-			cmd += "\" -highest";
-
-			st = MGlobal::executeCommand(cmd,shader);
-
-			if (shader != "") st = allShaders.add(shader);
-		}
-
-		allShaders.getSelectionStrings(allShaderStrings);
-		unsigned nss = allShaderStrings.length();
-		ts += nss;
-
-		for (unsigned j=0;j<nss;j++) {
-
-			MString shader = allShaderStrings[j];
-		// archive name must not have the namespace, so strip it out
-			MString archiveName;
-			MStringArray tmpSA;
-			shader.split(':',tmpSA);
-			archiveName = tmpSA[(tmpSA.length() -1)];
-			archiveName = (archiveName + " " +shaderTypes[t]);
-
-			RiArchiveBegin( const_cast <char *>(archiveName.asChar()), RI_NULL);
-			MString outputCmd = "DSN_output( \"";
-			outputCmd += shader;
-			outputCmd += "\",\"";
-			outputCmd += shaderTypes[t];
-			outputCmd += "\",\"\")";
-
-			st = MGlobal::executeCommand(outputCmd);
-			RiArchiveEnd();
-
-		}
-	}
-
-
-// now we have all the shader nodes in a selection list
-
-	return  ts;
-}
-
-MStatus alembicArchiveNode::archiveShadersAndAttribs() const {
-
-// cerr << "in archiveShadersAndAttribs" << endl;
-// we need to dig down to every shape contained within or under the sets or nodes connected to the lod geometry plug
-	MStatus st = MS::kSuccess;
-	MSelectionList allShapesList;
-	//archiveAttribs(thisMObject());
-	//archiveShaders(thisMObject());
-
-	return st;
-}
 

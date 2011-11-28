@@ -16,6 +16,7 @@
 #include "delightCacheAlembic.h"
 #include "alembicArchiveNode.h"
 
+#include <ri.h>
 
 //	static
 void* delightCacheAlembic::creator()
@@ -52,24 +53,26 @@ MStatus delightCacheAlembic::doIt( const MArgList& args )
 	MArgDatabase  argData(syntax(), args);
 	argData.getObjects(list);
 	MItSelectionList iter( list, MFn::kPluginDependNode);
-	MObject  rigInstObject;
-	MDagPath rigInstDagPath;
-	MFnDependencyNode rigInstFn;
+	MObject  archiveObject;
+	MDagPath archiveDagPath;
+	MFnDependencyNode archiveFn;
 	alembicArchiveNode * alembicArchive = 0;
 	MString fullPathName;
-	
+
 	for (;! iter.isDone() ; iter.next()) {
-		iter.getDependNode( rigInstObject );
-		rigInstFn.setObject( rigInstObject );
-		if (rigInstFn.typeId() == alembicArchiveNode::id) {
-			iter.getDagPath( rigInstDagPath );
-			fullPathName = rigInstDagPath.fullPathName();
-			alembicArchive =  (alembicArchiveNode*)rigInstFn.userNode();
+		iter.getDependNode( archiveObject );
+		archiveFn.setObject( archiveObject );
+		if (archiveFn.typeId() == alembicArchiveNode::id) {
+			iter.getDagPath( archiveDagPath );
+			fullPathName = archiveDagPath.fullPathName();
+			alembicArchive =  (alembicArchiveNode*)archiveFn.userNode();
 			break;
 		}
 	}
 	
 	if (argData.isFlagSet(kAddFlag)) {
+
+	    //cout << "Add Flag found" << endl;
 		if (!(alembicArchive)) {
 			displayError("Object not in cache");
 			return MS::kUnknownParameter;
@@ -78,29 +81,37 @@ MStatus delightCacheAlembic::doIt( const MArgList& args )
 			displayError("Need to specify a sample num with -st");
 			return MS::kUnknownParameter;
 		}
+
+
 		double dsampleTime;
 		float sampleTime;
 		st= argData.getFlagArgument (kSampleTimeFlag, 0, dsampleTime);
 		sampleTime = float(dsampleTime);
 /*		if (alembicArchive->hasCache(sampleTime)){
 			displayError("Object and sample already in cache: "+fullPathName +" " + sampleTime);
-			return MS::kUnknownParamet
+			return MS::kUnknownParameter;
 		}	else {
 			st = alembicArchive->addSlice(sampleTime);
 		} */
+
+		// Add Object to Cache
+
 		return st;
 	}
 
 	if (argData.isFlagSet(kEmitFlag)) {
+	    //cout << "Emit Flag found" << endl;
 		if (!(alembicArchive)) {
 			displayError("Object not in cache");
 			return MS::kUnknownParameter;
 		}
+
 		
 		if (argData.isFlagSet(kSampleTimeFlag)){
 			double sampleTime;
 			st= argData.getFlagArgument (kSampleTimeFlag, 0, sampleTime);
-		//	st = alembicArchive->emitCacheSlice(float(sampleTime));
+			st = alembicArchive->emitCache(float(sampleTime));
+
 		} else {
 			double relativeTime;
 			if (argData.isFlagSet(kRelativeTimeFlag)){
@@ -108,7 +119,7 @@ MStatus delightCacheAlembic::doIt( const MArgList& args )
 			} else {
 				st = MGlobal::executeCommand("delightRenderState -qf",relativeTime);
 			}
-			//st = alembicArchive->emitCache(float(relativeTime));
+			st = alembicArchive->emitCache(float(relativeTime));
 		}
 
 		return st;
@@ -116,6 +127,7 @@ MStatus delightCacheAlembic::doIt( const MArgList& args )
 
 
 	if (argData.isFlagSet(kRemoveFlag)) {
+	    //cout << "Remove Flag found" << endl;
 		if (!(alembicArchive)) {
 			displayError("Need to specify a alembicArchiveNode");
 			return MS::kUnknownParameter;
@@ -126,12 +138,13 @@ MStatus delightCacheAlembic::doIt( const MArgList& args )
 
 	
 	if (argData.isFlagSet(kFlushFlag)) {
+	    //cout << "Flush Flag found" << endl;
 		MItDag dagIter( MItDag::kDepthFirst, MFn::kPluginDependNode, &st);
 		for ( ;!dagIter.isDone();dagIter.next()){
-			rigInstObject = dagIter.currentItem();
-			rigInstFn.setObject( rigInstObject );
-			if (rigInstFn.typeId() == alembicArchiveNode::id) {
-				alembicArchive =  (alembicArchiveNode*)rigInstFn.userNode();
+			archiveObject = dagIter.currentItem();
+			archiveFn.setObject( archiveObject );
+			if (archiveFn.typeId() == alembicArchiveNode::id) {
+				alembicArchive =  (alembicArchiveNode*)archiveFn.userNode();
 				//st = alembicArchive->removeCache();
 			}
 		}
@@ -141,15 +154,16 @@ MStatus delightCacheAlembic::doIt( const MArgList& args )
 
 	if (argData.isFlagSet(kListFlag)) {
 
+	    //cout << "List Flag found" << endl;
 		MItDag dagIter( MItDag::kDepthFirst, MFn::kPluginDependNode, &st);
 		for ( ;!dagIter.isDone();dagIter.next()){
-			rigInstObject = dagIter.currentItem();
-			rigInstFn.setObject( rigInstObject );
-			if (rigInstFn.typeId() == alembicArchiveNode::id) {
-				alembicArchive =  (alembicArchiveNode*)rigInstFn.userNode();
-				/*if (alembicArchive->hasCache()) {
+			archiveObject = dagIter.currentItem();
+			archiveFn.setObject( archiveObject );
+			if (archiveFn.typeId() == alembicArchiveNode::id) {
+				alembicArchive =  (alembicArchiveNode*)archiveFn.userNode();
+				//if (alembicArchive->hasCache()) {
 					appendToResult(dagIter.fullPathName());
-				}*/
+				//}
 
 			}
 		}
@@ -158,12 +172,13 @@ MStatus delightCacheAlembic::doIt( const MArgList& args )
 	
 	
 	if (argData.isFlagSet(kInfoFlag)) {
+	    //cout << "Info Flag found" << endl;
 		MItDag dagIter( MItDag::kDepthFirst, MFn::kPluginDependNode, &st);
 		for ( ;!dagIter.isDone();dagIter.next()){
-			rigInstObject = dagIter.currentItem();
-			rigInstFn.setObject( rigInstObject );
-			if (rigInstFn.typeId() == alembicArchiveNode::id) {
-				alembicArchive =  (alembicArchiveNode*)rigInstFn.userNode();
+			archiveObject = dagIter.currentItem();
+			archiveFn.setObject( archiveObject );
+			if (archiveFn.typeId() == alembicArchiveNode::id) {
+				alembicArchive =  (alembicArchiveNode*)archiveFn.userNode();
 				cerr << dagIter.fullPathName() << endl;;
 				/*if (alembicArchive->hasCache()) {
 					cerr << "Cache  Exists" << endl;
