@@ -13,7 +13,6 @@ global proc AEalembicArchiveNodeTemplate (string $nodeName) {
 	
 	editorTemplate -beginScrollLayout;
 	
-	editorTemplate -addControl "showBoundingBox";	
 	editorTemplate -addControl "abcFile";	
 	editorTemplate -addControl "objectPath";	
 	editorTemplate -addControl "time";	
@@ -21,7 +20,8 @@ global proc AEalembicArchiveNodeTemplate (string $nodeName) {
 	editorTemplate -addControl "shutterOpen";		
 	editorTemplate -addControl "shutterClose";		
 	editorTemplate -addControl "furLOD";			
-	editorTemplate -addControl "furBbPad";			
+	editorTemplate -addControl "furBbPad";	
+	editorTemplate -addControl "showBoundingBox";			
 	editorTemplate -addControl "flipV";			
 	editorTemplate -addControl "polyAsSubD";		
 	
@@ -72,10 +72,10 @@ global proc AEalembicArchiveNodeTemplate (string $nodeName) {
 	editorTemplate -suppress "template";
 	editorTemplate -suppress "drawOverride" ;
 	editorTemplate -suppress "renderInfo" ;
-	editorTemplate -suppress "motionBlur" ;
-	editorTemplate -suppress "visibleInReflections" ;
-	editorTemplate -suppress "visibleInRefractions" ; 
-	editorTemplate -suppress "castsShadows" ;
+	//editorTemplate -suppress "motionBlur" ;
+	//editorTemplate -suppress "visibleInReflections" ;
+	//editorTemplate -suppress "visibleInRefractions" ; 
+	//editorTemplate -suppress "castsShadows" ;
 	editorTemplate -suppress "maxVisibilitySamplesOverride";
 	editorTemplate -suppress "maxVisibilitySamples";
 	editorTemplate -suppress "geometryAntialiasingOverride";
@@ -85,22 +85,19 @@ global proc AEalembicArchiveNodeTemplate (string $nodeName) {
 	editorTemplate -suppress "maxShadingSamples";
 	editorTemplate -suppress "volumeSamplesOverride";
 	editorTemplate -suppress "volumeSamples";
-	editorTemplate -suppress "primaryVisibility";
 
 	editorTemplate -suppress "ghosting";
 	editorTemplate -suppress "ghostDriver";
 	editorTemplate -suppress "ghostingControl";
 	editorTemplate -suppress "renderLayerInfo";
-	editorTemplate -suppress "primaryVisibility";
 	editorTemplate -suppress "ghostCustomSteps";
 	editorTemplate -suppress "ghostFrames";
 	editorTemplate -suppress "ghostRangeStart";
 	editorTemplate -suppress "ghostRangeEnd";
-	editorTemplate -suppress "receiveShadows";
+	//editorTemplate -suppress "receiveShadows";
 	editorTemplate -suppress "depthJitter";
 	editorTemplate -suppress "ignoreSelfShadowing";
 	editorTemplate -suppress "localScale";
-	editorTemplate -suppress "primaryVisibility";
 	
 	editorTemplate -suppress "localPosition";
 	

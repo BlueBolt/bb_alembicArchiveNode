@@ -7,6 +7,7 @@
 //
 // Author: Ashley Retallack
 //
+// TODO: Add viewport 2.0 compatibility
 
 #include <maya/MCommandResult.h>
 #include <math.h>
@@ -218,6 +219,7 @@ void alembicArchiveNode::draw( M3dView& view,
 //    TIMER.start();
 
     MColor col;
+
     if (status == 8) {
         col = MColor(0.8,1.0,0.8);
     } else if (status == 0) {
@@ -232,27 +234,31 @@ void alembicArchiveNode::draw( M3dView& view,
     // we change will not affect anything else maya draws afterwards.
     glPushAttrib( GL_ALL_ATTRIB_BITS );
 
-//    glShadeModel( GL_SMOOTH );
+ //   glShadeModel( GL_LINES );
     setHolderTime();
 
     // init gl shaders - DISABLED FOR NOW - not even sure if we can do this here
 //    glshader.init((char *)vshader, (char *)fshader);
 
+    if (style == M3dView::kWireFrame){
 
-    glEnable(GL_LIGHTING);
+    	glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 
-    glEnable(GL_COLOR_MATERIAL);
-
-    glEnable (GL_BLEND);
-    glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    
+    } else {
+    	glShadeModel( GL_SMOOTH );
+    	glEnable(GL_LIGHTING);
+    	glEnable(GL_COLOR_MATERIAL);
+    	glEnable (GL_BLEND);
+    	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    }
 //    glUseProgram(glshader.getProgram());    
 
     glColor3f(col.r,col.g,col.b);
 
+    bool doGL = 1;
     // draw the "scene" from the alembic file
     std::string sceneKey = getSceneKey();
-    if (abcSceneManager.hasKey(sceneKey))
+    if (abcSceneManager.hasKey(sceneKey) && doGL)
         abcSceneManager.getScene(sceneKey)->draw(abcSceneState);
         
     glFlush();
@@ -621,12 +627,12 @@ MStatus alembicArchiveNode::initialize()
 	nAttr.setKeyable( true );
 	st = addAttribute(aShowBB);
 
-    aFlipV = nAttr.create( "flipV", "fv", MFnNumericData::kBoolean, 0, &st);
+    aFlipV = nAttr.create( "flipV", "fv", MFnNumericData::kBoolean, 1, &st);
     nAttr.setHidden(false);
 	nAttr.setKeyable( true );
 	st = addAttribute(aFlipV);
 
-    aPolyAsSubD = nAttr.create( "polyAsSubD", "psd", MFnNumericData::kBoolean, 0, &st);
+    aPolyAsSubD = nAttr.create( "polyAsSubD", "psd", MFnNumericData::kBoolean, 1, &st);
     nAttr.setHidden(false);
 	nAttr.setKeyable( true );
 	st = addAttribute(aPolyAsSubD);er;
