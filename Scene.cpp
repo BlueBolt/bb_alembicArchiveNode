@@ -185,7 +185,6 @@ Scene::Scene( const std::string &abcFileName, const std::string &objectPath )
 //    std::cout << "Bounds at min time: " << m_bounds.min << " to "
 //              << m_bounds.max << std::endl;
 
-    std::cout << "[aABCH] Opened Archive: " << abcFileName << "/" << objectPath << std::endl;
 
 }
 
