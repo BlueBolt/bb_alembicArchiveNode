@@ -1,40 +1,37 @@
-/**
-(c)2011 Bluebolt Ltd.  All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-* Redistributions of source code must retain the above copyright
-notice, this list of conditions and the following disclaimer.
-* Redistributions in binary form must reproduce the above
-copyright notice, this list of conditions and the following disclaimer
-in the documentation and/or other materials provided with the
-distribution.
-* Neither the name of BlueBolt nor the names of
-its contributors may be used to endorse or promote products derived
-from this software without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-Author:Ashley Retallack - ashley-r@blue-bolt.com
-
-File:alembicArchiveNode.cpp
-
-Dependency Graph Node: alembicArchiveNode
-
-Based upon animaAlembicHolder by Olli Rajala @ Anima
-
-**/
+//******************************************************************************
+// (c)2011 BlueBolt Ltd.  All rights reserved.
+// 
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are
+// met:
+// * Redistributions of source code must retain the above copyright
+// notice, this list of conditions and the following disclaimer.
+// * Redistributions in binary form must reproduce the above
+// copyright notice, this list of conditions and the following disclaimer
+// in the documentation and/or other materials provided with the
+// distribution.
+// * Neither the name of BlueBolt nor the names of
+// its contributors may be used to endorse or promote products derived
+// from this software without specific prior written permission.
+// 
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+// A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+// OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+// LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+// THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// 
+// Author:Ashley Retallack - ashley-r@blue-bolt.com
+// 
+// File:alembicArchiveNode.cpp
+// 
+// 
+//******************************************************************************
 
 // TODO: Add viewport 2.0 compatibility
 // FIXME: Many dense archive nodes in scene crash maya when activating draw
@@ -260,11 +257,10 @@ void alembicArchiveNode::draw( M3dView& view,
     // we change will not affect anything else maya draws afterwards.
     glPushAttrib( GL_ALL_ATTRIB_BITS );
 
- //   glShadeModel( GL_LINES );
     setHolderTime();
 
     // init gl shaders - DISABLED FOR NOW - not even sure if we can do this here
-//    glshader.init((char *)vshader, (char *)fshader);
+    // glshader.init((char *)vshader, (char *)fshader);
 
     if (style == M3dView::kWireFrame){
 
@@ -277,7 +273,7 @@ void alembicArchiveNode::draw( M3dView& view,
     	glEnable (GL_BLEND);
     	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     }
-//    glUseProgram(glshader.getProgram());    
+    // glUseProgram(glshader.getProgram());
 
     glColor3f(col.r,col.g,col.b);
 
@@ -288,8 +284,6 @@ void alembicArchiveNode::draw( M3dView& view,
         abcSceneManager.getScene(sceneKey)->draw(abcSceneState);
         
     glFlush();
-//    glFinish();
-
 
     // restore the old openGL settings
     glPopAttrib();
@@ -536,6 +530,7 @@ MStatus alembicArchiveNode::initialize()
    // aAbcFile = tAttr.create( "abcFile", "af", MFnStringData::kString );
 //    tAttr.setWritable(true);
 //    tAttr.setReadable(true);
+    tAttr.setUsedAsFilename(true);
     tAttr.setHidden(false);
     tAttr.setStorable(true);
     tAttr.setKeyable(true);
