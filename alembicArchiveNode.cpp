@@ -34,10 +34,15 @@
 //******************************************************************************
 
 // TODO: Add viewport 2.0 compatibility
-// FIXME: Many dense archive nodes in scene crash maya when activating draw
+// FIXME: Many dense archive nodes in scene crash maya when activating draw on
+//	      startup
 
 #include <maya/MCommandResult.h>
 #include <math.h>
+
+#include <bb_MayaIds.h>
+
+
 #include "alembicArchiveNode.h"
 
 #include <maya/MPlug.h>
@@ -58,7 +63,7 @@
 #include "boost/foreach.hpp"
 
 // The id is a 32bit value used to identify this type of node in the binary file format.
-MTypeId     alembicArchiveNode::id( 0x00114955 );
+MTypeId     alembicArchiveNode::id( k_alembicArchiveNode );
 
 MObject     alembicArchiveNode::aAbcFile;
 MObject     alembicArchiveNode::aObjectPath;
@@ -526,10 +531,6 @@ MStatus alembicArchiveNode::initialize()
 
     aAbcFile = tAttr.create("abcFile", "af",
         MFnData::kString, fileNameDefaultObject);
-
-   // aAbcFile = tAttr.create( "abcFile", "af", MFnStringData::kString );
-//    tAttr.setWritable(true);
-//    tAttr.setReadable(true);
     tAttr.setUsedAsFilename(true);
     tAttr.setHidden(false);
     tAttr.setStorable(true);
