@@ -67,6 +67,10 @@ MTypeId     alembicArchiveNode::id( k_alembicArchiveNode );
 
 MObject     alembicArchiveNode::aAbcFile;
 MObject     alembicArchiveNode::aObjectPath;
+
+MObject     alembicArchiveNode::aShowProxy;
+MObject     alembicArchiveNode::aProxyPath;
+
 MObject     alembicArchiveNode::aTime;
 MObject     alembicArchiveNode::aTimeOffset;
 MObject     alembicArchiveNode::aShutterOpen;
@@ -188,7 +192,15 @@ void abcChangedCallback( MNodeMessage::AttributeMessage msg, MPlug & plug, MPlug
 void nodePreRemovalCallback( MObject& obj, void* data)
 {
     alembicArchiveNode::alembicArchiveNode *node = (alembicArchiveNode::alembicArchiveNode *)data;
-    alembicArchiveNode::abcSceneManager.removeScene(node->getSceneKey());
+
+    MFnDagNode fn( node->thisMObject() );
+
+    MString objectPath;
+
+	MPlug plug  = fn.findPlug( node->aObjectPath );
+	plug.getValue( objectPath );
+
+    alembicArchiveNode::abcSceneManager.removeScene(node->getSceneKey(objectPath));
 }
 
 alembicArchiveNode::alembicArchiveNode() {
@@ -225,8 +237,13 @@ double alembicArchiveNode::setHolderTime(bool atClose = false) const
     } else {
         dtime = time.as(MTime::kSeconds)+timeOffset.as(MTime::kSeconds)+shutterCloseT.as(MTime::kSeconds);
     }
-        
-    std::string sceneKey = getSceneKey();
+
+    MString objectPath;
+
+	plug  = fn.findPlug( aObjectPath );
+	plug.getValue( objectPath );
+
+    std::string sceneKey = getSceneKey(objectPath);
     if (abcSceneManager.hasKey(sceneKey))
         abcSceneManager.getScene(sceneKey)->setTime(dtime);
 
@@ -239,6 +256,10 @@ void alembicArchiveNode::draw( M3dView& view,
 		M3dView::DisplayStatus status )
 {
 	MStatus st;
+
+	MObject thisNode = thisMObject();
+
+
     // update scene if needed
     if (m_abcdirty) updateAbc(this);
 
@@ -282,9 +303,27 @@ void alembicArchiveNode::draw( M3dView& view,
 
     glColor3f(col.r,col.g,col.b);
 
+    MFnDagNode fn( thisNode );
+
     bool doGL = 1;
     // draw the "scene" from the alembic file
-    std::string sceneKey = getSceneKey();
+
+    bool proxy = false;
+
+    MString objectPath;
+
+    MPlug plug =  fn.findPlug( aShowProxy );
+    plug.getValue( proxy );
+
+    if (proxy){
+    	plug  = fn.findPlug( aProxyPath );
+		plug.getValue( objectPath );
+    } else {
+    	plug  = fn.findPlug( aObjectPath );
+    	plug.getValue( objectPath );
+    }
+
+    std::string sceneKey = getSceneKey(objectPath);
     if (abcSceneManager.hasKey(sceneKey) && doGL)
         abcSceneManager.getScene(sceneKey)->draw(abcSceneState);
         
@@ -296,7 +335,6 @@ void alembicArchiveNode::draw( M3dView& view,
 
     //add the boundingbox
 
-	MObject thisNode = thisMObject();
 
     MPlug bbPlug(thisNode, aShowBB );
     bool doBB = bbPlug.asBool() ;
@@ -332,7 +370,12 @@ MBoundingBox alembicArchiveNode::boundingBox() const
 
     MBoundingBox bbox;
 
-    std::string sceneKey = getSceneKey();
+    MString objectPath;
+    MFnDagNode fn( thisMObject() );
+	MPlug plug  = fn.findPlug( aObjectPath );
+	plug.getValue( objectPath );
+
+    std::string sceneKey = getSceneKey(objectPath);
     if (abcSceneManager.hasKey(sceneKey)) {
         SimpleAbcViewer::Box3d bb;
         if (!m_bbmode) {
@@ -506,7 +549,7 @@ void alembicArchiveNode::copyInternalData( MPxNode* srcNode )
     plug.getValue( objectPath );
 
     abcSceneManager.addScene(abcfile.asChar(),objectPath.asChar());
-    m_currscenekey = getSceneKey();
+    m_currscenekey = getSceneKey(objectPath);
 
 //    std::cout << "copyInternalData: " << abcfile << " " << objectPath << std::endl;
 
@@ -537,17 +580,26 @@ MStatus alembicArchiveNode::initialize()
     tAttr.setKeyable(true);
 
     aObjectPath = tAttr.create( "objectPath", "op", MFnStringData::kString );
-//    tAttr.setWritable(true);
-//    tAttr.setReadable(true);
+    tAttr.setWritable(true);
+    tAttr.setReadable(true);
     tAttr.setHidden(false);
     tAttr.setStorable(true);
     tAttr.setKeyable(true);
 
-/*    aBooleanAttr = nAttr.create( "booleanAttr", "bo", MFnNumericData::kBoolean );
+    aShowProxy = nAttr.create( "showProxy", "sp", MFnNumericData::kBoolean );
     nAttr.setReadable(true);
     nAttr.setKeyable(true);
     nAttr.setDefault(false);
-*/
+	st = addAttribute(aShowProxy);
+
+    aProxyPath = tAttr.create( "proxyPath", "pp", MFnStringData::kString );
+    tAttr.setWritable(true);
+    tAttr.setReadable(true);
+    tAttr.setHidden(false);
+    tAttr.setStorable(true);
+    tAttr.setKeyable(true);
+	st = addAttribute(aProxyPath);
+
     aTime = uAttr.create( "time", "t", MFnUnitAttribute::kTime );
     uAttr.setStorable(false);
     uAttr.setKeyable(true);
@@ -827,18 +879,24 @@ MStatus alembicArchiveNode::doSomething()
     return MS::kSuccess;
 }
 
-std::string alembicArchiveNode::getSceneKey() const
+std::string alembicArchiveNode::getSceneKey(MString path) const
 {
     MFnDagNode fn( thisMObject() );
     MString abcfile;
     MPlug plug  = fn.findPlug( aAbcFile );
     plug.getValue( abcfile );
     abcfile = abcfile.expandFilePath();
-    MString objectPath;
-    plug  = fn.findPlug( aObjectPath );
-    plug.getValue( objectPath );
 
-    return std::string((abcfile+"/"+objectPath).asChar());
+    //if not proxy show full path
+
+    bool proxy = false;
+
+    plug  = fn.findPlug( aShowProxy );
+    plug.getValue( proxy );
+
+
+
+    return std::string((abcfile+"/"+path).asChar());
 }
 
 MStatus alembicArchiveNode::emitCache(float relativeFrame)  {

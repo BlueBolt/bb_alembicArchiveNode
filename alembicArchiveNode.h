@@ -96,7 +96,7 @@ public:
 
         MStatus     doSomething();
         
-    std::string getSceneKey() const;
+    std::string getSceneKey(MString path) const;
 
 	MStatus emitCache(float relativeFrame=0.0f) ;
 
@@ -104,7 +104,10 @@ public:
 
     static  MObject     aAbcFile; 
     static  MObject     aObjectPath; 
-//    static  MObject     aBooleanAttr; // example boolean attribute
+
+    static  MObject     aShowProxy;
+    static  MObject     aProxyPath;
+
     static  MObject     aTime;
     static  MObject     aTimeOffset;
     static  MObject     aShutterOpen;

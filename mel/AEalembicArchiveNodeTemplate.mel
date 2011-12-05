@@ -43,7 +43,9 @@ global proc AEalembicArchiveNodeTemplate (string $nodeName) {
 	editorTemplate -beginScrollLayout;
 	
 	editorTemplate -addControl "abcFile";	
-	editorTemplate -addControl "objectPath";	
+	editorTemplate -addControl "objectPath";
+	editorTemplate -addControl "showProxy";
+	editorTemplate -addControl "proxyPath";	
 	editorTemplate -addControl "time";	
 	editorTemplate -addControl "timeOffset";	
 	editorTemplate -addControl "shutterOpen";		
