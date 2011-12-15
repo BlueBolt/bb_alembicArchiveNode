@@ -52,6 +52,16 @@ IObjectDrw.h
 MeshDrwHelper.h
 SceneManager.h
 delightCacheAlembic.h
+  CameraHelper.h
+  CreateSceneHelper.h
+  LocatorHelper.h
+  MeshHelper.h
+  NodeIteratorVisitorHelper.h
+  NurbsCurveHelper.h
+  NurbsSurfaceHelper.h
+  PointHelper.h
+  util.h
+  XformHelper.h
 )
 
 SET( CXX_FILES
@@ -66,6 +76,16 @@ pluginMain.cpp
 Scene.cpp
 Transport.cpp
 delightCacheAlembic.cpp
+  CameraHelper.cpp
+  CreateSceneHelper.cpp
+  LocatorHelper.cpp
+  MeshHelper.cpp
+  NurbsCurveHelper.cpp
+  NurbsSurfaceHelper.cpp
+  NodeIteratorVisitorHelper.cpp
+  PointHelper.cpp
+  util.cpp
+  XformHelper.cpp
 )
 
 SET( SOURCE_FILES ${CXX_FILES} ${H_FILES} )
@@ -79,6 +99,7 @@ SET( CORE_LIBS
 
 INCLUDE_DIRECTORIES( ${ALEMBIC_HDF5_INCLUDE_PATH} )
 INCLUDE_DIRECTORIES( ".." )
+INCLUDE_DIRECTORIES( "../lib" )
 INCLUDE_DIRECTORIES( ${ALEMBIC_PRMAN_INCLUDE_PATH} )
 INCLUDE_DIRECTORIES( "/development/playground/maya/include" )
 

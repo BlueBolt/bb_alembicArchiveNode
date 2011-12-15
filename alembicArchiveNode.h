@@ -43,6 +43,10 @@ Based upon animaAlembicHolder by Olli Rajala @ anima
 #include "Transport.h"
 #include "Scene.h"
 #include "SceneManager.h"
+#include "NodeIteratorVisitorHelper.h"
+
+#include <Alembic/AbcGeom/IPolyMesh.h>
+#include <Alembic/AbcGeom/ISubD.h>
 
 #include <maya/MPxNode.h>
 #include <maya/MPxLocatorNode.h>
@@ -58,6 +62,7 @@ Based upon animaAlembicHolder by Olli Rajala @ anima
 #include <maya/MStringArray.h>
 #include <maya/MFloatVector.h>
 #include <maya/MIntArray.h>
+#include <maya/MFloatArray.h>
 #include <maya/MDoubleArray.h>
 #include <maya/MFnStringData.h>
 #include <maya/MTypeId.h>
@@ -96,7 +101,7 @@ public:
 
         MStatus     doSomething();
         
-    std::string getSceneKey(MString path) const;
+    std::string getSceneKey(bool proxy) const;
 
 	MStatus emitCache(float relativeFrame=0.0f) ;
 
@@ -118,6 +123,8 @@ public:
     static  MObject     aBBMax;
     static	MObject		aBBSize;
     static	MObject		aBB;
+
+    static	MObject		aOutUVs;
 
     static  MObject     aFurBBPad;
     static  MObject     aFurBBMin;
@@ -154,9 +161,13 @@ public:
 
 	int archiveShaders(	const MStringArray & shapeNames) const;
 
+	MIntArray getUVShells() const;
+
 private:
 
 	void drawABox(const MVector &bbmin, const MVector &bbmax) ;
+
+	WriterData oData;
 
 
 };

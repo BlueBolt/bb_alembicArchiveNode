@@ -42,7 +42,8 @@
 
 #include <bb_MayaIds.h>
 
-
+#include "util.h"
+#include "CreateSceneHelper.h"
 #include "alembicArchiveNode.h"
 
 #include <maya/MPlug.h>
@@ -81,6 +82,8 @@ MObject     alembicArchiveNode::aBBMin;
 MObject     alembicArchiveNode::aBBMax;
 MObject 	alembicArchiveNode::aBBSize;
 MObject 	alembicArchiveNode::aBB;
+
+MObject 	alembicArchiveNode::aOutUVs;
 
 MObject     alembicArchiveNode::aFurBBPad;
 MObject     alembicArchiveNode::aFurBBMin;
@@ -200,7 +203,7 @@ void nodePreRemovalCallback( MObject& obj, void* data)
 	MPlug plug  = fn.findPlug( node->aObjectPath );
 	plug.getValue( objectPath );
 
-    alembicArchiveNode::abcSceneManager.removeScene(node->getSceneKey(objectPath));
+    alembicArchiveNode::abcSceneManager.removeScene(node->getSceneKey(false));
 }
 
 alembicArchiveNode::alembicArchiveNode() {
@@ -238,12 +241,8 @@ double alembicArchiveNode::setHolderTime(bool atClose = false) const
         dtime = time.as(MTime::kSeconds)+timeOffset.as(MTime::kSeconds)+shutterCloseT.as(MTime::kSeconds);
     }
 
-    MString objectPath;
 
-	plug  = fn.findPlug( aObjectPath );
-	plug.getValue( objectPath );
-
-    std::string sceneKey = getSceneKey(objectPath);
+    std::string sceneKey = getSceneKey(false);
     if (abcSceneManager.hasKey(sceneKey))
         abcSceneManager.getScene(sceneKey)->setTime(dtime);
 
@@ -276,6 +275,41 @@ void alembicArchiveNode::draw( M3dView& view,
     } else {
     	col = MColor(0.7,0.5,0.5);
     }
+
+
+    /*
+    switch (status)  // From M3dView::DisplayStatus status  in the draw() command
+    {
+		case M3dView::kLead:
+			col= MColor(0.26, 1.0, 0.64)  ;		// maya green
+			bColOverride = true;
+			break ;
+
+		case M3dView::kActive:
+			col = MColor(1.0, 1.0, 1.0)  ;		// maya white
+			bColOverride = true;
+			break ;
+
+		case M3dView::kActiveAffected:
+			col = MColor(0.78, 1.0, 0.78)  ;	// maya magenta
+			bColOverride = true;
+			break ;
+
+		case M3dView::kTemplate:
+			col = MColor(0.47, 0.47, 0.47)  ;	// maya template gray
+			bColOverride = true;
+			break ;
+
+		case M3dView::kActiveTemplate:
+			col = MColor(1.0, 0.47, 0.47)  ;	// maya selected template pink
+			bColOverride = true;
+			break ;
+
+		default:
+			//col = MColor(0.7,0.5,0.5);
+			col = MColor(0.1, 0.2, 0.7) ;	// else set color as desired
+    }
+	*/
 
     view.beginGL();
 
@@ -310,20 +344,10 @@ void alembicArchiveNode::draw( M3dView& view,
 
     bool proxy = false;
 
-    MString objectPath;
-
     MPlug plug =  fn.findPlug( aShowProxy );
     plug.getValue( proxy );
 
-    if (proxy){
-    	plug  = fn.findPlug( aProxyPath );
-		plug.getValue( objectPath );
-    } else {
-    	plug  = fn.findPlug( aObjectPath );
-    	plug.getValue( objectPath );
-    }
-
-    std::string sceneKey = getSceneKey(objectPath);
+    std::string sceneKey = getSceneKey(proxy);
     if (abcSceneManager.hasKey(sceneKey) && doGL)
         abcSceneManager.getScene(sceneKey)->draw(abcSceneState);
         
@@ -370,12 +394,7 @@ MBoundingBox alembicArchiveNode::boundingBox() const
 
     MBoundingBox bbox;
 
-    MString objectPath;
-    MFnDagNode fn( thisMObject() );
-	MPlug plug  = fn.findPlug( aObjectPath );
-	plug.getValue( objectPath );
-
-    std::string sceneKey = getSceneKey(objectPath);
+    std::string sceneKey = getSceneKey(false);
     if (abcSceneManager.hasKey(sceneKey)) {
         SimpleAbcViewer::Box3d bb;
         if (!m_bbmode) {
@@ -461,6 +480,34 @@ MStatus alembicArchiveNode::compute( const MPlug& plug, MDataBlock& data )
         m_bbmode = 0; // back to default
     }
 
+    // return the uvs as an array to outUVs attribute so multishell
+    // textures will work
+    if(plug == aOutUVs)
+    {
+
+        //Alembic::AbcGeom::IPolyMeshSchema schema = iNode.mMesh.getSchema();
+
+        MDataHandle timeData = data.inputValue(aTime, &returnStatus);
+
+        MTime time = timeData.asTime();
+
+        MIntArray tmpUVArray = getUVShells();
+
+        int nEle = tmpUVArray.length();
+
+        int iVal;
+
+        //plug.clear();
+
+    	/*for (idx=0; idx < nEle; ++idx)
+    	    {
+				MPlug plugElement = plug.elementByLogicalIndex( idx, &stat) ;
+				plugElement.setValue( iVal ) ;
+    	    }
+		*/
+
+    }
+
     if(plug == aOutFps || plug == aOutFrame )
     {
         MDataHandle timeData = data.inputValue(aTime, &returnStatus);
@@ -487,28 +534,150 @@ MStatus alembicArchiveNode::compute( const MPlug& plug, MDataBlock& data )
         tmpData.setClean();
     }
 
-    if( plug == aShowBB )
-    {
-
-        MBoundingBox bb = boundingBox();
-
-        MString info = "Viewing BoundingBox";
-            info +=  bb.min().x;
-            info +=  bb.min().y;
-            info +=  bb.min().z;
-            info +=  bb.max().x;
-            info +=  bb.max().y;
-            info +=  bb.max().z;
-
-            MGlobal::displayInfo(info);
-
-
-    }
-
     return MS::kSuccess;
 }
 
 
+MIntArray alembicArchiveNode::getUVShells() const
+{
+	//get the current alembic file as a writer object
+
+	double mTime = setHolderTime();
+
+    std::string sceneKey = getSceneKey(false);
+
+    CreateSceneVisitor visitor(mTime,false,
+        MObject::kNullObj, CreateSceneVisitor::NONE, MString(sceneKey.c_str()));
+
+	//retreive the list of uValues and vValues from the current level
+	//in the alembic file
+
+    WriterData mData;
+
+	visitor.getData(mData);
+
+	MFloatArray uValues;
+	MFloatArray vValues;
+
+	//list through the polymeshes
+
+	unsigned int i;
+	for (i=0; i < oData.mPolyMeshList.size();++i)
+	{
+		Alembic::AbcGeom::IPolyMeshSchema schema = oData.mPolyMeshList[i].mMesh.getSchema();
+
+		Alembic::AbcGeom::IV2fGeomParam iUVs=schema.getUVsParam();
+
+        // no interpolation for now
+        Alembic::AbcCoreAbstract::index_t index, ceilIndex;
+        getWeightAndIndex(mTime, iUVs.getTimeSampling(),
+            iUVs.getNumSamples(), index, ceilIndex);
+
+		Alembic::AbcGeom::IV2fGeomParam::Sample samp;
+		iUVs.getIndexed(samp, Alembic::Abc::ISampleSelector(index));
+
+		Alembic::AbcGeom::V2fArraySamplePtr uvPtr = samp.getVals();
+		Alembic::Abc::UInt32ArraySamplePtr indexPtr = samp.getIndices();
+
+		unsigned int numUVs = (unsigned int)uvPtr->size();
+		uValues.setLength(uValues.length()+numUVs);
+		vValues.setLength(vValues.length()+numUVs);
+		for (unsigned int s = 0; s < numUVs; ++s)
+		{
+			uValues.append((*uvPtr)[s].x);
+			vValues.append((*uvPtr)[s].y);
+		}
+	}
+
+
+	//list through the subDSurfaces
+
+	for (i=0; i < oData.mSubDList.size();++i)
+	{
+		Alembic::AbcGeom::ISubDSchema schema = oData.mSubDList[i].mMesh.getSchema();
+
+		Alembic::AbcGeom::IV2fGeomParam iUVs=schema.getUVsParam();
+
+        Alembic::AbcCoreAbstract::index_t index, ceilIndex;
+        getWeightAndIndex(mTime, iUVs.getTimeSampling(),
+            iUVs.getNumSamples(), index, ceilIndex);
+
+		iUVs=schema.getUVsParam();
+
+		Alembic::AbcGeom::IV2fGeomParam::Sample samp;
+		iUVs.getIndexed(samp, Alembic::Abc::ISampleSelector(index));
+
+		Alembic::AbcGeom::V2fArraySamplePtr uvPtr = samp.getVals();
+		Alembic::Abc::UInt32ArraySamplePtr indexPtr = samp.getIndices();
+
+		unsigned int numUVs = (unsigned int)uvPtr->size();
+		uValues.setLength(uValues.length()+numUVs);
+		vValues.setLength(vValues.length()+numUVs);
+		for (unsigned int s = 0; s < numUVs; ++s)
+		{
+			uValues.append((*uvPtr)[s].x);
+			vValues.append((*uvPtr)[s].y);
+		}
+	}
+
+
+	//convert the two arrays in to a new arry of integers for the
+	//shells that this file/path contains
+
+	MIntArray uvShells;
+
+
+    int minU=0;
+    int maxU=1;
+    int minV=0;
+    int maxV=1;
+
+
+    for (unsigned int u=0;u < uValues.length();++u){
+    	if (u > maxU)
+    		maxU=ceil(uValues[u]);
+    }
+
+    for (unsigned int v=0;v < vValues.length();++v){
+    	if (v > maxV)
+    		maxV=ceil(vValues[v]);
+    }
+
+    int t_minU = maxU;
+
+    for (unsigned int mu=0;mu < uValues.length();++mu){
+    	if (floor(uValues[mu]) < t_minU)
+    		t_minU=floor(uValues[mu]);
+    }
+
+
+    minU=t_minU;
+
+    int t_minV = maxV;
+
+	for (unsigned int v=0;v < vValues.length();++v){
+		if (floor(vValues[v]) < t_minV)
+			t_minV=floor(vValues[v]);
+	}
+
+    minV=t_minV;
+
+	for (unsigned int t=minU;t < maxU;++t){
+		for (unsigned int u=0;u<uValues.length();++u){
+    		if (u > t && u < t+1 && t+1){
+    			bool matching = false;
+    			for (int j = 0; (j < i) && (matching == false); j++)if (uvShells[i] == t+1) matching = true;
+    			if (!matching) uvShells.append(t+1);
+
+    		}
+		}
+
+	}
+
+	return uvShells;
+
+
+}  // setUVs
 
 void* alembicArchiveNode::creator()
 {
@@ -544,12 +713,13 @@ void alembicArchiveNode::copyInternalData( MPxNode* srcNode )
     MPlug plug  = fn.findPlug( aAbcFile );
     plug.getValue( abcfile );
     abcfile = abcfile.expandFilePath();
+
     MString objectPath;
     plug  = fn.findPlug( aObjectPath );
     plug.getValue( objectPath );
 
     abcSceneManager.addScene(abcfile.asChar(),objectPath.asChar());
-    m_currscenekey = getSceneKey(objectPath);
+    m_currscenekey = getSceneKey(false);
 
 //    std::cout << "copyInternalData: " << abcfile << " " << objectPath << std::endl;
 
@@ -626,6 +796,14 @@ MStatus alembicArchiveNode::initialize()
     nAttr.setWritable(true);
     nAttr.setReadable(true);
     nAttr.setHidden(true);
+
+    //array of uvshells that this archive/path contains (starting with 1)
+    aOutUVs = nAttr.create( "outUVs", "ouv", MFnNumericData::kInt);
+    nAttr.setStorable(false);
+    nAttr.setReadable(true);
+	nAttr.setConnectable(true) ;
+	nAttr.setArray(true);		// Set this to be an array!
+	nAttr.setUsesArrayDataBuilder(true);		// Set this to be true also!
 
 
 
@@ -760,6 +938,7 @@ MStatus alembicArchiveNode::initialize()
     attributeAffects( aAbcFile, aFurBBMax );
     attributeAffects( aAbcFile, aFurBB );
     attributeAffects( aAbcFile, aBBCenter );
+    attributeAffects( aAbcFile, aOutUVs );
 
     attributeAffects( aObjectPath, aBBMin );
     attributeAffects( aObjectPath, aBBMax );
@@ -767,6 +946,7 @@ MStatus alembicArchiveNode::initialize()
     attributeAffects( aObjectPath, aFurBBMax );;
     attributeAffects( aObjectPath, aBBCenter );
     attributeAffects( aObjectPath, aShowBB );
+    attributeAffects( aObjectPath, aOutUVs );
 
 
     attributeAffects( aTime, aOutFps );
@@ -777,6 +957,7 @@ MStatus alembicArchiveNode::initialize()
     attributeAffects( aTime, aFurBBMax );
     attributeAffects( aTime, aBBCenter );
     attributeAffects( aTime, aShowBB );
+    attributeAffects( aTime, aOutUVs );
 
     attributeAffects( aTimeOffset, aOutFps );
     attributeAffects( aTimeOffset, aOutFrame );
@@ -786,6 +967,7 @@ MStatus alembicArchiveNode::initialize()
     attributeAffects( aTimeOffset, aFurBBMax );
     attributeAffects( aTimeOffset, aBBCenter );
     attributeAffects( aTimeOffset, aShowBB );
+    attributeAffects( aTimeOffset, aOutUVs );
     
     attributeAffects( aShutterOpen, aOutFps );
     attributeAffects( aShutterOpen, aBBMin );
@@ -793,13 +975,15 @@ MStatus alembicArchiveNode::initialize()
     attributeAffects( aShutterOpen, aFurBBMin );
     attributeAffects( aShutterOpen, aFurBBMax );
     attributeAffects( aShutterOpen, aShowBB );
+    attributeAffects( aShutterOpen, aOutUVs );
 
     attributeAffects( aShutterClose, aOutFps );
     attributeAffects( aShutterClose, aBBMin );
     attributeAffects( aShutterClose, aBBMax );
     attributeAffects( aShutterClose, aFurBBMin );
     attributeAffects( aShutterClose, aFurBBMax );
-    attributeAffects( aShutterOpen, aShowBB );
+    attributeAffects( aShutterClose, aShowBB );
+    attributeAffects( aShutterClose, aOutUVs );
 
     attributeAffects( aFurBBPad, aFurBBMin );
     attributeAffects( aFurBBPad, aFurBBMax );
@@ -879,7 +1063,7 @@ MStatus alembicArchiveNode::doSomething()
     return MS::kSuccess;
 }
 
-std::string alembicArchiveNode::getSceneKey(MString path) const
+std::string alembicArchiveNode::getSceneKey(bool proxy) const
 {
     MFnDagNode fn( thisMObject() );
     MString abcfile;
@@ -887,16 +1071,17 @@ std::string alembicArchiveNode::getSceneKey(MString path) const
     plug.getValue( abcfile );
     abcfile = abcfile.expandFilePath();
 
+	MString objPath;
     //if not proxy show full path
+    if (proxy){
+		MPlug objPathPlug = fn.findPlug( aProxyPath );
+		objPathPlug.getValue( objPath );
+    } else {
+    	MPlug objPathPlug = fn.findPlug(  aObjectPath );
+    	objPathPlug.getValue( objPath );
 
-    bool proxy = false;
-
-    plug  = fn.findPlug( aShowProxy );
-    plug.getValue( proxy );
-
-
-
-    return std::string((abcfile+"/"+path).asChar());
+    }
+    return std::string((abcfile+"/"+objPath).asChar());
 }
 
 MStatus alembicArchiveNode::emitCache(float relativeFrame)  {
