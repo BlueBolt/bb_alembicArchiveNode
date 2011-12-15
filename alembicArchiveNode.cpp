@@ -499,12 +499,12 @@ MStatus alembicArchiveNode::compute( const MPlug& plug, MDataBlock& data )
 
         //plug.clear();
 
-    	/*for (idx=0; idx < nEle; ++idx)
+    	for (idx=0; idx < nEle; ++idx)
     	    {
 				MPlug plugElement = plug.elementByLogicalIndex( idx, &stat) ;
 				plugElement.setValue( iVal ) ;
     	    }
-		*/
+
 
     }
 
