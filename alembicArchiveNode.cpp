@@ -802,9 +802,11 @@ MStatus alembicArchiveNode::initialize()
     aOutUVs = nAttr.create( "outUVs", "ouv", MFnNumericData::kInt);
     nAttr.setStorable(false);
     nAttr.setReadable(true);
+    nAttr.setWritable(true);
 	nAttr.setConnectable(true) ;
 	nAttr.setArray(true);		// Set this to be an array!
 	nAttr.setUsesArrayDataBuilder(true);		// Set this to be true also!
+    nAttr.setHidden(true);
 
 
 
