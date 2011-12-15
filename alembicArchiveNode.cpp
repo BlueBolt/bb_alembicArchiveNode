@@ -135,9 +135,30 @@ void updateAbc(const void* data)
         node->m_currscenekey = "";
     }
 
+
+
+
+
     alembicArchiveNode::abcSceneManager.addScene(file.asChar(),objectPath.asChar());
     node->m_currscenekey = key;
     node->m_abcdirty = false;
+
+    MIntArray tmpUVArray = node->getUVShells();
+
+    int nEle = tmpUVArray.length();
+
+    int iVal;
+
+    MPlug outUVplug  = fn.findPlug( alembicArchiveNode::aOutUVs );
+
+//
+//	for (int idx=0; idx < nEle; ++idx)
+//	    {
+//			MPlug plugElement = outUVplug.elementByLogicalIndex( idx, &stat) ;
+//			plugElement.setValue( iVal ) ;
+//	    }
+
+    //outUVplug.setValue( tmpUVArray ) ;
 }
 
 void abcDirtiedCallback( MObject & nodeMO , MPlug & plug, void* data)
@@ -484,26 +505,6 @@ MStatus alembicArchiveNode::compute( const MPlug& plug, MDataBlock& data )
     // textures will work
     if(plug == aOutUVs)
     {
-
-        //Alembic::AbcGeom::IPolyMeshSchema schema = iNode.mMesh.getSchema();
-
-        MDataHandle timeData = data.inputValue(aTime, &returnStatus);
-
-        MTime time = timeData.asTime();
-
-        MIntArray tmpUVArray = getUVShells();
-
-        int nEle = tmpUVArray.length();
-
-        int iVal;
-
-        //plug.clear();
-
-    	for (int idx=0; idx < nEle; ++idx)
-    	    {
-				MPlug plugElement = plug.elementByLogicalIndex( idx, &stat) ;
-				plugElement.setValue( iVal ) ;
-    	    }
 
 
     }
