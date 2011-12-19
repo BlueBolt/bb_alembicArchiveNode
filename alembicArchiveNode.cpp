@@ -55,6 +55,7 @@
 
 #include <sys/time.h>
 #include <stdio.h>
+#include <iostream>
 #include <unistd.h>
 #include <map>
 
@@ -136,29 +137,9 @@ void updateAbc(const void* data)
     }
 
 
-
-
-
     alembicArchiveNode::abcSceneManager.addScene(file.asChar(),objectPath.asChar());
     node->m_currscenekey = key;
     node->m_abcdirty = false;
-
-    MIntArray tmpUVArray = node->getUVShells();
-
-    int nEle = tmpUVArray.length();
-
-    int iVal;
-
-    MPlug outUVplug  = fn.findPlug( alembicArchiveNode::aOutUVs );
-
-//
-//	for (int idx=0; idx < nEle; ++idx)
-//	    {
-//			MPlug plugElement = outUVplug.elementByLogicalIndex( idx, &stat) ;
-//			plugElement.setValue( iVal ) ;
-//	    }
-
-    //outUVplug.setValue( tmpUVArray ) ;
 }
 
 void abcDirtiedCallback( MObject & nodeMO , MPlug & plug, void* data)
@@ -452,7 +433,6 @@ MStatus alembicArchiveNode::compute( const MPlug& plug, MDataBlock& data )
 
     if (plug == aAbcFile || plug == aObjectPath ){
 
-
     	cout << "just did something!! :D" << endl;
 
     }
@@ -506,6 +486,29 @@ MStatus alembicArchiveNode::compute( const MPlug& plug, MDataBlock& data )
     if(plug == aOutUVs)
     {
 
+    	data.setClean(plug);
+
+        // ----- get uvshells and change the attribute to fit
+
+        MIntArray tmpUVArray = getUVShells();
+
+        int nEle = tmpUVArray.length();
+
+        MArrayDataHandle outputArray = data.outputArrayValue(aOutUVs,
+                                                             &returnStatus);
+        MArrayDataBuilder builder(aOutUVs, nEle, &returnStatus);
+
+    	for (unsigned int idx=0; idx < nEle; ++idx)
+    	    {
+
+    		MDataHandle outHandle = builder.addElement(idx);
+    		outHandle.set(tmpUVArray[idx]);
+
+    	    }
+
+    	returnStatus = outputArray.set(builder);
+
+    	returnStatus = outputArray.setAllClean();
 
     }
 
@@ -539,108 +542,196 @@ MStatus alembicArchiveNode::compute( const MPlug& plug, MDataBlock& data )
 }
 
 
-MIntArray alembicArchiveNode::getUVShells() const
+void alembicArchiveNode::walk(Alembic::Abc::IObject iObj)
 {
-	//get the current alembic file as a writer object
+	// Walk through the given object and return all of its children
+
+
+    // Object has a name, a full name, some meta data,
+    // and then it has a compound property full of properties.
+    std::string path = iObj.getFullName();
+
+    if ( path != "/" )
+    {
+
+		outIObjList.push_back(iObj);
+
+    }
+
+    // now the child objects
+    for ( size_t i = 0 ; i < iObj.getNumChildren() ; i++ )
+    {
+        walk( Alembic::Abc::IObject( iObj, iObj.getChildHeader( i ).getName() ));
+
+    }
+
+
+}
+
+
+MIntArray alembicArchiveNode::getUVShells()
+{
+	MIntArray uvShells;
+    MStatus st = MS::kSuccess;
+
 
 	double mTime = setHolderTime();
 
-    std::string sceneKey = getSceneKey(false);
+    MFnDagNode fn( thisMObject() );
+    MString abcfile;
+    MPlug plug  = fn.findPlug( aAbcFile );
+    plug.getValue( abcfile );
 
-    CreateSceneVisitor visitor(mTime,false,
-        MObject::kNullObj, CreateSceneVisitor::NONE, MString(sceneKey.c_str()));
+    Alembic::Abc::IArchive archive(Alembic::AbcCoreHDF5::ReadArchive(),
+    		abcfile.asChar(), Alembic::Abc::ErrorHandler::Policy(),
+        Alembic::AbcCoreAbstract::ReadArraySampleCachePtr());
+
+    if (!archive.valid())
+    {
+//        MString theError = abcfile;
+//        theError += MString(" not a valid Alembic file.");
+//        printError(theError);
+        return uvShells;
+    }
+
+    MString objPath;
+    plug  = fn.findPlug( aObjectPath );
+    plug.getValue( objPath );
+
+    Alembic::Abc::IObject top = archive.getTop();
+
+    // find the start point
+
+    Alembic::Abc::IObject start=top;
+
+    if (objPath != "" && objPath != "/")
+    {
+    	std::string st_str(objPath.asChar());
+
+    	walk(top);
+
+    	for (std::vector<Alembic::Abc::IObject>::iterator i = outIObjList.begin(); i != outIObjList.end(); i++)
+    	{
+
+    		Alembic::Abc::IObject this_object = *i;
+
+    		if (this_object.getFullName() == st_str) start = this_object;
+
+    	}
+
+    }
+
+    size_t numChildren = start.getNumChildren();
+    if (numChildren == 0) return uvShells;
+
+	//list through the objects and retreve data based upon
+    //the object being a polymesh or subD
+
+    outIObjList.clear();
+
+	walk(start);
 
 	//retreive the list of uValues and vValues from the current level
 	//in the alembic file
 
-    WriterData mData;
-
-	visitor.getData(mData);
-
 	MFloatArray uValues;
 	MFloatArray vValues;
 
-	//list through the polymeshes
+	size_t noObjects = outIObjList.size() ;
 
-	unsigned int i;
-	for (i=0; i < oData.mPolyMeshList.size();++i)
+	for (std::vector<Alembic::Abc::IObject>::iterator i = outIObjList.begin(); i != outIObjList.end(); i++)
 	{
-		Alembic::AbcGeom::IPolyMeshSchema schema = oData.mPolyMeshList[i].mMesh.getSchema();
+		//get the type for this object
 
-		Alembic::AbcGeom::IV2fGeomParam iUVs=schema.getUVsParam();
+		Alembic::Abc::IObject this_object = *i;
 
-        // no interpolation for now
-        Alembic::AbcCoreAbstract::index_t index, ceilIndex;
-        getWeightAndIndex(mTime, iUVs.getTimeSampling(),
-            iUVs.getNumSamples(), index, ceilIndex);
+		MString ntype;
 
-		Alembic::AbcGeom::IV2fGeomParam::Sample samp;
-		iUVs.getIndexed(samp, Alembic::Abc::ISampleSelector(index));
-
-		Alembic::AbcGeom::V2fArraySamplePtr uvPtr = samp.getVals();
-		Alembic::Abc::UInt32ArraySamplePtr indexPtr = samp.getIndices();
-
-		unsigned int numUVs = (unsigned int)uvPtr->size();
-		uValues.setLength(uValues.length()+numUVs);
-		vValues.setLength(vValues.length()+numUVs);
-		for (unsigned int s = 0; s < numUVs; ++s)
+		if ( Alembic::AbcGeom::ISubD::matches(this_object.getHeader()) )
 		{
-			uValues.append((*uvPtr)[s].x);
-			vValues.append((*uvPtr)[s].y);
+			ntype="ISubD";
+
+			Alembic::AbcGeom::ISubD mesh(this_object, Alembic::Abc::kWrapExisting);
+
+			Alembic::AbcGeom::ISubDSchema schema = mesh.getSchema();
+
+			Alembic::AbcGeom::IV2fGeomParam iUVs=schema.getUVsParam();
+
+			Alembic::AbcCoreAbstract::index_t index, ceilIndex;
+			getWeightAndIndex(mTime, iUVs.getTimeSampling(),
+				iUVs.getNumSamples(), index, ceilIndex);
+
+			Alembic::AbcGeom::IV2fGeomParam::Sample samp;
+			iUVs.getIndexed(samp, Alembic::Abc::ISampleSelector(index));
+
+			Alembic::AbcGeom::V2fArraySamplePtr uvPtr = samp.getVals();
+			Alembic::Abc::UInt32ArraySamplePtr indexPtr = samp.getIndices();
+
+			unsigned int numUVs = (unsigned int)uvPtr->size();
+
+			//uValues.setLength(numUVs);
+			//vValues.setLength(numUVs);
+
+			for (unsigned int s = 0; s < numUVs; s++)
+			{
+				uValues.append((*uvPtr)[s].x);
+				//vValues.append((*uvPtr)[s].y);
+			}
+
+
 		}
-	}
-
-
-	//list through the subDSurfaces
-
-	for (i=0; i < oData.mSubDList.size();++i)
-	{
-		Alembic::AbcGeom::ISubDSchema schema = oData.mSubDList[i].mMesh.getSchema();
-
-		Alembic::AbcGeom::IV2fGeomParam iUVs=schema.getUVsParam();
-
-        Alembic::AbcCoreAbstract::index_t index, ceilIndex;
-        getWeightAndIndex(mTime, iUVs.getTimeSampling(),
-            iUVs.getNumSamples(), index, ceilIndex);
-
-		iUVs=schema.getUVsParam();
-
-		Alembic::AbcGeom::IV2fGeomParam::Sample samp;
-		iUVs.getIndexed(samp, Alembic::Abc::ISampleSelector(index));
-
-		Alembic::AbcGeom::V2fArraySamplePtr uvPtr = samp.getVals();
-		Alembic::Abc::UInt32ArraySamplePtr indexPtr = samp.getIndices();
-
-		unsigned int numUVs = (unsigned int)uvPtr->size();
-		uValues.setLength(uValues.length()+numUVs);
-		vValues.setLength(vValues.length()+numUVs);
-		for (unsigned int s = 0; s < numUVs; ++s)
+		else if ( Alembic::AbcGeom::IPolyMesh::matches(this_object.getHeader()) )
 		{
-			uValues.append((*uvPtr)[s].x);
-			vValues.append((*uvPtr)[s].y);
+			ntype="IPolyMesh";
+
+			Alembic::AbcGeom::IPolyMesh mesh(this_object, Alembic::Abc::kWrapExisting);
+
+			Alembic::AbcGeom::IPolyMeshSchema schema = mesh.getSchema();
+
+			Alembic::AbcGeom::IV2fGeomParam iUVs=schema.getUVsParam();
+
+		    // no interpolation for now
+			Alembic::AbcCoreAbstract::index_t index, ceilIndex;
+			getWeightAndIndex(mTime, iUVs.getTimeSampling(),
+				iUVs.getNumSamples(), index, ceilIndex);
+
+			Alembic::AbcGeom::IV2fGeomParam::Sample samp;
+			iUVs.getIndexed(samp, Alembic::Abc::ISampleSelector(index));
+
+			Alembic::AbcGeom::V2fArraySamplePtr uvPtr = samp.getVals();
+			Alembic::Abc::UInt32ArraySamplePtr indexPtr = samp.getIndices();
+
+			unsigned int numUVs = (unsigned int)uvPtr->size();
+
+			//uValues.setLength(numUVs);
+			//vValues.setLength(numUVs);
+
+			for (unsigned int s = 0; s < numUVs; s++)
+			{
+				uValues.append((*uvPtr)[s].x);
+				vValues.append((*uvPtr)[s].y);
+			}
+
 		}
+
 	}
 
 
 	//convert the two arrays in to a new arry of integers for the
 	//shells that this file/path contains
 
-	MIntArray uvShells;
-
-
     int minU=0;
     int maxU=1;
     int minV=0;
     int maxV=1;
 
-
     for (unsigned int u=0;u < uValues.length();++u){
-    	if (u > maxU)
+    	if (ceil(uValues[u]) > maxU)
     		maxU=ceil(uValues[u]);
     }
 
     for (unsigned int v=0;v < vValues.length();++v){
-    	if (v > maxV)
+    	if (ceil(vValues[v]) > maxV)
     		maxV=ceil(vValues[v]);
     }
 
@@ -663,17 +754,19 @@ MIntArray alembicArchiveNode::getUVShells() const
 
     minV=t_minV;
 
-	for (unsigned int t=minU;t < maxU;++t){
-		for (unsigned int u=0;u<uValues.length();++u){
-    		if (u > t && u < t+1 && t+1){
+	for (unsigned int t=minU;t < maxU;t++){
+		for (unsigned int u=0;u<uValues.length();u++){
+    		if (uValues[u] > t && uValues[u] < t+1){
     			bool matching = false;
-    			for (int j = 0; (j < i) && (matching == false); j++)if (uvShells[i] == t+1) matching = true;
+    			for (int j = 0; (j < uvShells.length()); j++)if (uvShells[j] == t+1) matching = true;
     			if (!matching) uvShells.append(t+1);
-
+    			//uvShells.append(t+1);
     		}
 		}
 
 	}
+
+	//cout << "alembicArchiveNode::getUVShells  uvShells > "<<  uvShells << endl;
 
 	return uvShells;
 
@@ -799,14 +892,14 @@ MStatus alembicArchiveNode::initialize()
     nAttr.setHidden(true);
 
     //array of uvshells that this archive/path contains (starting with 1)
-    aOutUVs = nAttr.create( "outUVs", "ouv", MFnNumericData::kInt);
+    aOutUVs = nAttr.create( "outUVs", "ouv", MFnNumericData::kInt,0,&st);
     nAttr.setStorable(false);
     nAttr.setReadable(true);
     nAttr.setWritable(true);
-	nAttr.setConnectable(true) ;
 	nAttr.setArray(true);		// Set this to be an array!
 	nAttr.setUsesArrayDataBuilder(true);		// Set this to be true also!
     nAttr.setHidden(true);
+	st = addAttribute(aOutUVs);er;
 
 
 

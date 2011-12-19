@@ -74,6 +74,8 @@ Based upon animaAlembicHolder by Olli Rajala @ anima
 //include the renderman interface header for the procedural stuff
 #include <ri.h>
 
+#include <set>
+
 #include <iostream>
 
 #include "GlShaderHolder.h"
@@ -143,6 +145,10 @@ public:
 //    static  MObject     aExportFaceIds;
 //    static  MObject     aFaceIdAttributeName;
 
+
+	//std::set<std::string>  outIObjList;
+	std::vector<Alembic::Abc::IObject>  outIObjList;
+
     static  MTypeId     id;
     
     static SimpleAbcViewer::SceneState   abcSceneState;
@@ -161,11 +167,16 @@ public:
 
 	int archiveShaders(	const MStringArray & shapeNames) const;
 
-	MIntArray getUVShells() const;
+	MIntArray getUVShells();
+	//void walk(Alembic::Abc::IObject iObj, std::set<Alembic::Abc::IObject> outIObjList);
+
+	//void walk(Alembic::Abc::IObject iObj);
 
 private:
 
 	void drawABox(const MVector &bbmin, const MVector &bbmax) ;
+
+	void walk(Alembic::Abc::IObject iObj);
 
 	WriterData oData;
 
