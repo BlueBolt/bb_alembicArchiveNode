@@ -34,6 +34,7 @@
 //******************************************************************************
 
 // TODO: Add viewport 2.0 compatibility
+// TODO: Add SubD display
 // FIXME: Many dense archive nodes in scene crash maya when activating draw on
 //	      startup
 
