@@ -144,7 +144,7 @@ void updateAbc(const void* data)
 
     MPlug uvPlug  = fn.findPlug( alembicArchiveNode::aOutUVs );
 
-    MIntArray tmpUVArray = node.getUVShells();
+    MIntArray tmpUVArray = node->getUVShells();
 
     int nEle = tmpUVArray.length();
 
@@ -172,11 +172,11 @@ void updateAbc(const void* data)
     		{
     			// using mel because there's no equivalant api method as far as i know.
     			MString command = "removeMultiInstance -b true \"" + plugName + "[" + i + "]\"";
-    			s = MGlobal::executeCommand( command );
-    			assert( s );
-    			if( !s )
+    			st = MGlobal::executeCommand( command );
+    			assert( st );
+    			if( !st )
     			{
-    				return s;
+    				return st;
     			}
     		}
 
