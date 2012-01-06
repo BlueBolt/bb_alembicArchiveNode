@@ -139,7 +139,7 @@ void updateAbc(const void* data)
         alembicArchiveNode::abcSceneManager.removeScene(node->m_currscenekey);
         node->m_currscenekey = "";
     }
-
+    /*
     //fill in the ouv attribute
 
     MPlug uvPlug  = fn.findPlug( alembicArchiveNode::aOutUVs );
@@ -177,7 +177,7 @@ void updateAbc(const void* data)
     		}
 
 
-    }
+    }*/
 
 
 
@@ -527,7 +527,7 @@ MStatus alembicArchiveNode::compute( const MPlug& plug, MDataBlock& data )
 
     // return the uvs as an array to outUVs attribute so multishell
     // textures will work
-    /*
+
     if(plug == aOutUVs)
     {
 
@@ -556,7 +556,7 @@ MStatus alembicArchiveNode::compute( const MPlug& plug, MDataBlock& data )
     	returnStatus = outputArray.setAllClean();
 
     }
-    */
+
 
     if(plug == aOutFps || plug == aOutFrame )
     {
