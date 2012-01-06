@@ -42,23 +42,27 @@ global proc AEalembicArchiveNodeTemplate (string $nodeName) {
 	
 	editorTemplate -beginScrollLayout;
 	
-	editorTemplate -addControl "abcFile";	
-	editorTemplate -addControl "objectPath";
-	editorTemplate -addControl "showProxy";
-	editorTemplate -addControl "proxyPath";	
-	editorTemplate -addControl "time";	
-	editorTemplate -addControl "timeOffset";	
-	editorTemplate -addControl "shutterOpen";		
-	editorTemplate -addControl "shutterClose";		
-	editorTemplate -addControl "furLOD";			
-	editorTemplate -addControl "furBbPad";	
-	editorTemplate -addControl "showBoundingBox";			
-	editorTemplate -addControl "flipV";			
-	editorTemplate -addControl "polyAsSubD";		
+	editorTemplate -cl 0 -beginLayout   "Main";
 	
+		editorTemplate -addControl "abcFile";	
+		editorTemplate -addControl "objectPath";
+		editorTemplate -addControl "showProxy";
+		editorTemplate -addControl "proxyPath";	
+		editorTemplate -addControl "time";	
+		editorTemplate -addControl "timeOffset";	
+		editorTemplate -addControl "shutterOpen";		
+		editorTemplate -addControl "shutterClose";		
+		editorTemplate -addControl "furLOD";			
+		editorTemplate -addControl "furBbPad";	
+		editorTemplate -addControl "showBoundingBox";			
+		editorTemplate -addControl "flipV";			
+		editorTemplate -addControl "polyAsSubD";		
+		
 	editorTemplate -endLayout;
 	
+	editorTemplate -addExtraControls;	
 	
+	// supressed attributes
 	editorTemplate -suppress "furBoundingBox" ;
 	editorTemplate -suppress "furBbMin" ;
 	editorTemplate -suppress "furBbMax" ;

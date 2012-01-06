@@ -35,6 +35,7 @@
 
 // TODO: Add viewport 2.0 compatibility
 // TODO: Add SubD display
+// TODO: Add out object tree attribute (output a list of objects in the archive)
 // FIXME: Many dense archive nodes in scene crash maya when activating draw on
 //	      startup
 
@@ -115,6 +116,8 @@ char fshader[] = {
 
 void updateAbc(const void* data)
 {
+	MStatus st;
+
     alembicArchiveNode::alembicArchiveNode *node = (alembicArchiveNode::alembicArchiveNode *)data;
 
     MFnDagNode fn( node->thisMObject() );
@@ -136,6 +139,50 @@ void updateAbc(const void* data)
         alembicArchiveNode::abcSceneManager.removeScene(node->m_currscenekey);
         node->m_currscenekey = "";
     }
+
+    //fill in the ouv attribute
+
+    MPlug uvPlug  = fn.findPlug( alembicArchiveNode::aOutUVs );
+
+    MIntArray tmpUVArray = alembicArchiveNode::getUVShells();
+
+    int nEle = tmpUVArray.length();
+
+    for(unsigned i=0; i<nEle; i++)
+    {
+    	MPlug plugElement = uvPlug.elementByLogicalIndex( i, &st) ;
+		plugElement.setValue( tmpUVArray[i] ) ;
+    }
+
+    // now we need to remove the other values from the attribute
+    if (nEle < uvPlug.numElements(&st)){
+
+    		MIntArray iarrIndexes ;	// array to hold each valid index number.
+    		unsigned nPlugEle = uvPlug.getExistingArrayAttributeIndices ( iarrIndexes, &stat ) ;
+
+    		MString plugName = uvPlug.name();
+
+    		MObject node = uvPlug.node();
+    		MFnDagNode fnDAGN( node );
+    		if( fnDAGN.hasObj( node ) )
+    		{
+    			plugName = fnDAGN.fullPathName() + "." + uvPlug.partialName();
+    		}
+    		for( unsigned i=nEle; i<nPlugEle.length(); i++ )
+    		{
+    			// using mel because there's no equivalant api method as far as i know.
+    			MString command = "removeMultiInstance -b true \"" + plugName + "[" + i + "]\"";
+    			s = MGlobal::executeCommand( command );
+    			assert( s );
+    			if( !s )
+    			{
+    				return s;
+    			}
+    		}
+
+
+    }
+
 
 
     alembicArchiveNode::abcSceneManager.addScene(file.asChar(),objectPath.asChar());
@@ -484,6 +531,7 @@ MStatus alembicArchiveNode::compute( const MPlug& plug, MDataBlock& data )
 
     // return the uvs as an array to outUVs attribute so multishell
     // textures will work
+    /*
     if(plug == aOutUVs)
     {
 
@@ -512,6 +560,7 @@ MStatus alembicArchiveNode::compute( const MPlug& plug, MDataBlock& data )
     	returnStatus = outputArray.setAllClean();
 
     }
+    */
 
     if(plug == aOutFps || plug == aOutFrame )
     {
