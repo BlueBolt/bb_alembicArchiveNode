@@ -144,7 +144,7 @@ void updateAbc(const void* data)
 
     MPlug uvPlug  = fn.findPlug( alembicArchiveNode::aOutUVs );
 
-    MIntArray tmpUVArray = alembicArchiveNode::getUVShells();
+    MIntArray tmpUVArray = node.getUVShells();
 
     int nEle = tmpUVArray.length();
 
@@ -158,7 +158,7 @@ void updateAbc(const void* data)
     if (nEle < uvPlug.numElements(&st)){
 
     		MIntArray iarrIndexes ;	// array to hold each valid index number.
-    		unsigned nPlugEle = uvPlug.getExistingArrayAttributeIndices ( iarrIndexes, &stat ) ;
+    		unsigned nPlugEle = uvPlug.getExistingArrayAttributeIndices ( iarrIndexes, &st ) ;
 
     		MString plugName = uvPlug.name();
 
