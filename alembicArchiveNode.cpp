@@ -174,10 +174,6 @@ void updateAbc(const void* data)
     			MString command = "removeMultiInstance -b true \"" + plugName + "[" + i + "]\"";
     			st = MGlobal::executeCommand( command );
     			assert( st );
-    			if( !st )
-    			{
-    				return st;
-    			}
     		}
 
 
