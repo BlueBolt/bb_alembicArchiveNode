@@ -168,7 +168,7 @@ void updateAbc(const void* data)
     		{
     			plugName = fnDAGN.fullPathName() + "." + uvPlug.partialName();
     		}
-    		for( unsigned i=nEle; i<nPlugEle.length(); i++ )
+    		for( unsigned i=nEle; i<iarrIndexes.length(); i++ )
     		{
     			// using mel because there's no equivalant api method as far as i know.
     			MString command = "removeMultiInstance -b true \"" + plugName + "[" + i + "]\"";
