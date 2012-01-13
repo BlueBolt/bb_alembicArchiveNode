@@ -38,6 +38,7 @@
 // TODO: Add out object tree attribute (output a list of objects in the archive)
 // FIXME: Many dense archive nodes in scene crash maya when activating draw on
 //	      startup
+// FIXME: outUVs seems to error randomly see ticket #1408
 
 #include <maya/MCommandResult.h>
 #include <math.h>
@@ -45,7 +46,7 @@
 #include <bb_MayaIds.h>
 
 #include "util.h"
-#include "CreateSceneHelper.h"
+//#include "CreateSceneHelper.h"
 #include "alembicArchiveNode.h"
 
 #include <maya/MPlug.h>
@@ -628,15 +629,18 @@ MIntArray alembicArchiveNode::getUVShells()
     MPlug plug  = fn.findPlug( aAbcFile );
     plug.getValue( abcfile );
 
-    Alembic::Abc::IArchive archive(Alembic::AbcCoreHDF5::ReadArchive(),
-    		abcfile.asChar(), Alembic::Abc::ErrorHandler::Policy(),
-        Alembic::AbcCoreAbstract::ReadArraySampleCachePtr());
+    //Alembic::Abc::IArchive archive(Alembic::AbcCoreHDF5::ReadArchive(),
+    //		abcfile.asChar(), Alembic::Abc::ErrorHandler::Policy(),
+    //   Alembic::AbcCoreAbstract::ReadArraySampleCachePtr());
+
+    std::string sceneKey = getSceneKey(false);
+    Alembic::Abc::IArchive archive = abcSceneManager.getScene(sceneKey)->getArchive();
 
     if (!archive.valid())
     {
-//        MString theError = abcfile;
-//        theError += MString(" not a valid Alembic file.");
-//        printError(theError);
+        MString theError = abcfile;
+        theError += MString(" not a valid Alembic file.");
+        printError(theError);
         return uvShells;
     }
 
@@ -649,6 +653,8 @@ MIntArray alembicArchiveNode::getUVShells()
     // find the start point
 
     Alembic::Abc::IObject start=top;
+
+
 
     if (objPath != "" && objPath != "/")
     {
@@ -684,6 +690,8 @@ MIntArray alembicArchiveNode::getUVShells()
 	MFloatArray vValues;
 
 	size_t noObjects = outIObjList.size() ;
+
+ 	cout << "noObjects :: " <<  noObjects << endl;
 
 	for (std::vector<Alembic::Abc::IObject>::iterator i = outIObjList.begin(); i != outIObjList.end(); i++)
 	{
@@ -773,19 +781,19 @@ MIntArray alembicArchiveNode::getUVShells()
 
     for (unsigned int u=0;u < uValues.length();++u){
     	if (ceil(uValues[u]) > maxU)
-    		maxU=ceil(uValues[u]);
+    		maxU=int(ceil(uValues[u]));
     }
 
     for (unsigned int v=0;v < vValues.length();++v){
     	if (ceil(vValues[v]) > maxV)
-    		maxV=ceil(vValues[v]);
+    		maxV=int(ceil(vValues[v]));
     }
 
     int t_minU = maxU;
 
     for (unsigned int mu=0;mu < uValues.length();++mu){
     	if (floor(uValues[mu]) < t_minU)
-    		t_minU=floor(uValues[mu]);
+    		t_minU=int(floor(uValues[mu]));
     }
 
 
@@ -795,7 +803,7 @@ MIntArray alembicArchiveNode::getUVShells()
 
 	for (unsigned int v=0;v < vValues.length();++v){
 		if (floor(vValues[v]) < t_minV)
-			t_minV=floor(vValues[v]);
+			t_minV=int(floor(vValues[v]));
 	}
 
     minV=t_minV;

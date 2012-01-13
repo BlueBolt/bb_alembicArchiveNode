@@ -64,6 +64,14 @@ public:
     //! ...
     const std::string &getFileName() const { return m_fileName; }
 
+    //! Return the top object object
+    //! ...
+    const IObject &getTopObject() const { return m_topObject; }
+
+    //! Return the archive
+    //! ...
+    const IArchive &getArchive() const { return m_archive; }
+
     //! Return the min time, in seconds.
     //! ...
     chrono_t getMinTime() const { return m_minTime; }
