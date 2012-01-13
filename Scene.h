@@ -64,7 +64,7 @@ public:
     //! ...
     const std::string &getFileName() const { return m_fileName; }
 
-    //! Return the top object object
+    //! Return the root object
     //! ...
     const IObject &getTopObject() const { return m_topObject; }
 

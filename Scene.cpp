@@ -119,11 +119,7 @@ Scene::Scene( const std::string &abcFileName, const std::string &objectPath )
 
     m_drawable.reset( new IObjectDrw( m_topObject, false, path ) );
 
-/*    if ( path.empty() ) //walk the entire scene
-    {
-        m_drawable.reset( new IObjectDrw( m_topObject, false ) );
-    }
-    else //walk to objectpath
+    if ( !path.empty() ) //walk the entire scene
     {
         const ObjectHeader *nextChildHeader = &m_topObject.getHeader();
         IObject nextParentObject = m_topObject;
@@ -140,16 +136,9 @@ Scene::Scene( const std::string &abcFileName, const std::string &objectPath )
 
         if ( nextChildHeader != NULL )
         {
-            m_drawable.reset( new IObjectDrw( nextParentObject, false ) );
             m_topObject = nextParentObject;
         }
-        else
-        {
-            m_drawable.reset( new IObjectDrw( m_topObject, false ) );
-            //m_topObject = IObject( m_archive, kTop );
-        }
     }
-*/
 
 //    m_drawable.reset( new IObjectDrw( m_topObject, false ) );
     ABCA_ASSERT( m_drawable->valid(),

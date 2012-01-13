@@ -629,49 +629,16 @@ MIntArray alembicArchiveNode::getUVShells()
     MPlug plug  = fn.findPlug( aAbcFile );
     plug.getValue( abcfile );
 
-    //Alembic::Abc::IArchive archive(Alembic::AbcCoreHDF5::ReadArchive(),
-    //		abcfile.asChar(), Alembic::Abc::ErrorHandler::Policy(),
-    //   Alembic::AbcCoreAbstract::ReadArraySampleCachePtr());
-
     std::string sceneKey = getSceneKey(false);
-    Alembic::Abc::IArchive archive = abcSceneManager.getScene(sceneKey)->getArchive();
 
-    if (!archive.valid())
-    {
-        MString theError = abcfile;
-        theError += MString(" not a valid Alembic file.");
-        printError(theError);
-        return uvShells;
-    }
+    Alembic::Abc::IObject start =  abcSceneManager.getScene(sceneKey)->getTopObject();
+
+
+ 	cout << "start :: " <<  start << endl;
 
     MString objPath;
     plug  = fn.findPlug( aObjectPath );
     plug.getValue( objPath );
-
-    Alembic::Abc::IObject top = archive.getTop();
-
-    // find the start point
-
-    Alembic::Abc::IObject start=top;
-
-
-
-    if (objPath != "" && objPath != "/")
-    {
-    	std::string st_str(objPath.asChar());
-
-    	walk(top);
-
-    	for (std::vector<Alembic::Abc::IObject>::iterator i = outIObjList.begin(); i != outIObjList.end(); i++)
-    	{
-
-    		Alembic::Abc::IObject this_object = *i;
-
-    		if (this_object.getFullName() == st_str) start = this_object;
-
-    	}
-
-    }
 
     size_t numChildren = start.getNumChildren();
     if (numChildren == 0) return uvShells;
@@ -690,8 +657,6 @@ MIntArray alembicArchiveNode::getUVShells()
 	MFloatArray vValues;
 
 	size_t noObjects = outIObjList.size() ;
-
- 	// cout << "noObjects :: " <<  noObjects << endl;
 
 	for (std::vector<Alembic::Abc::IObject>::iterator i = outIObjList.begin(); i != outIObjList.end(); i++)
 	{
