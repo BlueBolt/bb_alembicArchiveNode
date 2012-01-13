@@ -691,7 +691,7 @@ MIntArray alembicArchiveNode::getUVShells()
 
 	size_t noObjects = outIObjList.size() ;
 
- 	cout << "noObjects :: " <<  noObjects << endl;
+ 	// cout << "noObjects :: " <<  noObjects << endl;
 
 	for (std::vector<Alembic::Abc::IObject>::iterator i = outIObjList.begin(); i != outIObjList.end(); i++)
 	{
