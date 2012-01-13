@@ -634,7 +634,7 @@ MIntArray alembicArchiveNode::getUVShells()
     Alembic::Abc::IObject start =  abcSceneManager.getScene(sceneKey)->getTopObject();
 
 
- 	cout << "start :: " <<  start << endl;
+ 	cout << "start :: " <<  start.getFullName() << endl;
 
     MString objPath;
     plug  = fn.findPlug( aObjectPath );
