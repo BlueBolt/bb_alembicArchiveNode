@@ -38,7 +38,6 @@
 // TODO: Add out object tree attribute (output a list of objects in the archive)
 // FIXME: Many dense archive nodes in scene crash maya when activating draw on
 //	      startup
-// FIXME: outUVs seems to error randomly see ticket #1408
 
 #include <maya/MCommandResult.h>
 #include <math.h>
@@ -872,7 +871,7 @@ MStatus alembicArchiveNode::initialize()
     nAttr.setDefault(false);
 	st = addAttribute(aShowProxy);
 
-    aProxyPath = tAttr.create( "proxyPath", "pp", MFnStringData::kString );
+    aProxyPath = tAttr.create( "proxyPath", "pp", MFnStringData::kString);
     tAttr.setWritable(true);
     tAttr.setReadable(true);
     tAttr.setHidden(false);
@@ -890,10 +889,10 @@ MStatus alembicArchiveNode::initialize()
     uAttr.setStorable(true);
     uAttr.setKeyable(true);
 
-    aShutterOpen = nAttr.create( "shutterOpen", "so", MFnNumericData::kFloat );
+    aShutterOpen = nAttr.create( "shutterOpen", "so", MFnNumericData::kFloat , -0.5 );
     nAttr.setStorable(true);
     nAttr.setKeyable(true);
-    aShutterClose = nAttr.create( "shutterClose", "sc", MFnNumericData::kFloat );
+    aShutterClose = nAttr.create( "shutterClose", "sc", MFnNumericData::kFloat, 0.5 );
     nAttr.setStorable(true);
     nAttr.setKeyable(true);
 
@@ -991,7 +990,7 @@ MStatus alembicArchiveNode::initialize()
 	nAttr.setKeyable( true );
 	st = addAttribute(aShowBB);
 
-    aFlipV = nAttr.create( "flipV", "fv", MFnNumericData::kBoolean, 1, &st);
+    aFlipV = nAttr.create( "flipV", "fv", MFnNumericData::kBoolean, 0, &st);
     nAttr.setHidden(false);
 	nAttr.setKeyable( true );
 	st = addAttribute(aFlipV);
