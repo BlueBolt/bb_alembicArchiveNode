@@ -158,6 +158,7 @@ public:
     std::string m_currscenekey;
     int m_bbmode;
     bool m_abcdirty;
+    SimpleAbcViewer::ScenePtr m_scene;
     
     static GlShaderHolder glshader;
     

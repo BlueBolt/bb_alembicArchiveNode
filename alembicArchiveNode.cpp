@@ -182,6 +182,7 @@ void updateAbc(const void* data)
 
 
     alembicArchiveNode::abcSceneManager.addScene(file.asChar(),objectPath.asChar());
+    node->m_scene=alembicArchiveNode::abcSceneManager.getScene(key);
     node->m_currscenekey = key;
     node->m_abcdirty = false;
 }
@@ -290,7 +291,7 @@ double alembicArchiveNode::setHolderTime(bool atClose = false) const
 
     std::string sceneKey = getSceneKey(false);
     if (abcSceneManager.hasKey(sceneKey))
-        abcSceneManager.getScene(sceneKey)->setTime(dtime);
+    	m_scene->setTime(dtime);
 
     return dtime;
 }
@@ -363,7 +364,7 @@ void alembicArchiveNode::draw( M3dView& view,
     // we change will not affect anything else maya draws afterwards.
     glPushAttrib( GL_ALL_ATTRIB_BITS );
 
-    //setHolderTime();
+    setHolderTime();
 
     // init gl shaders - DISABLED FOR NOW - not even sure if we can do this here
     // glshader.init((char *)vshader, (char *)fshader);
@@ -395,7 +396,7 @@ void alembicArchiveNode::draw( M3dView& view,
 
     std::string sceneKey = getSceneKey(proxy);
     if (abcSceneManager.hasKey(sceneKey) && doGL)
-        abcSceneManager.getScene(sceneKey)->draw(abcSceneState);
+    	abcSceneManager.getScene(sceneKey)->draw(abcSceneState);
         
     glFlush();
 
@@ -443,14 +444,14 @@ MBoundingBox alembicArchiveNode::boundingBox() const
     std::string sceneKey = getSceneKey(false);
     if (abcSceneManager.hasKey(sceneKey)) {
         SimpleAbcViewer::Box3d bb;
-        if (!m_bbmode) {
+ /*       if (!m_bbmode) {
             setHolderTime(true); // first check bb at shutterClose
             bb = abcSceneManager.getScene(sceneKey)->getBounds();
             bbox.expand( MPoint( bb.min.x, bb.min.y, bb.min.z ) );
             bbox.expand( MPoint( bb.max.x, bb.max.y, bb.max.z ) );
-        }
+        }*/
         setHolderTime(); // ...then at shutterOpen
-        bb = abcSceneManager.getScene(sceneKey)->getBounds();
+        bb = m_scene->getBounds();
         bbox.expand( MPoint( bb.min.x, bb.min.y, bb.min.z ) );
         bbox.expand( MPoint( bb.max.x, bb.max.y, bb.max.z ) );
     }
@@ -635,11 +636,13 @@ MIntArray alembicArchiveNode::getUVShells()
 
     if (abcSceneManager.hasKey(sceneKey)){
 
-    	start =  abcSceneManager.getScene(sceneKey)->getTopObject();
+    	start =  m_scene->getTopObject();
 
     } else {
     	return uvShells;
     }
+
+	start =  m_scene->getTopObject();
 
     MString objPath;
     plug  = fn.findPlug( aObjectPath );
