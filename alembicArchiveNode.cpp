@@ -630,13 +630,27 @@ MIntArray alembicArchiveNode::getUVShells()
 
     std::string sceneKey = getSceneKey(false);
 
-    Alembic::Abc::IObject start =  abcSceneManager.getScene(sceneKey)->getTopObject();
+    std::cout << "sceneKey :: " << sceneKey << std::endl;
+
+    Alembic::Abc::IObject start;
+
+
+    if (abcSceneManager.hasKey(sceneKey)){
+
+    	start =  abcSceneManager.getScene(sceneKey)->getTopObject();
+
+    } else {
+    	return uvShells;
+    }
+
+    std::cout << "start :: " << start.getFullName() << std::endl;
 
     MString objPath;
     plug  = fn.findPlug( aObjectPath );
     plug.getValue( objPath );
 
     size_t numChildren = start.getNumChildren();
+    std::cout << "numChildren :: " << numChildren << std::endl;
     if (numChildren == 0) return uvShells;
 
 	//list through the objects and retreve data based upon
@@ -653,6 +667,7 @@ MIntArray alembicArchiveNode::getUVShells()
 	MFloatArray vValues;
 
 	size_t noObjects = outIObjList.size() ;
+    std::cout << "noObjects :: " << noObjects << std::endl;
 
 	for (std::vector<Alembic::Abc::IObject>::iterator i = outIObjList.begin(); i != outIObjList.end(); i++)
 	{
@@ -672,25 +687,27 @@ MIntArray alembicArchiveNode::getUVShells()
 
 			Alembic::AbcGeom::IV2fGeomParam iUVs=schema.getUVsParam();
 
-			Alembic::AbcCoreAbstract::index_t index, ceilIndex;
-			getWeightAndIndex(mTime, iUVs.getTimeSampling(),
-				iUVs.getNumSamples(), index, ceilIndex);
+			if ( iUVs.valid() ){
+				Alembic::AbcCoreAbstract::index_t index, ceilIndex;
+				getWeightAndIndex(mTime, iUVs.getTimeSampling(),
+					iUVs.getNumSamples(), index, ceilIndex);
 
-			Alembic::AbcGeom::IV2fGeomParam::Sample samp;
-			iUVs.getIndexed(samp, Alembic::Abc::ISampleSelector(index));
+				Alembic::AbcGeom::IV2fGeomParam::Sample samp;
+				iUVs.getIndexed(samp, Alembic::Abc::ISampleSelector(index));
 
-			Alembic::AbcGeom::V2fArraySamplePtr uvPtr = samp.getVals();
-			Alembic::Abc::UInt32ArraySamplePtr indexPtr = samp.getIndices();
+				Alembic::AbcGeom::V2fArraySamplePtr uvPtr = samp.getVals();
+				Alembic::Abc::UInt32ArraySamplePtr indexPtr = samp.getIndices();
 
-			unsigned int numUVs = (unsigned int)uvPtr->size();
+				unsigned int numUVs = (unsigned int)uvPtr->size();
 
-			//uValues.setLength(numUVs);
-			//vValues.setLength(numUVs);
+				//uValues.setLength(numUVs);
+				//vValues.setLength(numUVs);
 
-			for (unsigned int s = 0; s < numUVs; s++)
-			{
-				uValues.append((*uvPtr)[s].x);
-				//vValues.append((*uvPtr)[s].y);
+				for (unsigned int s = 0; s < numUVs; s++)
+				{
+					uValues.append((*uvPtr)[s].x);
+					//vValues.append((*uvPtr)[s].y);
+				}
 			}
 
 
@@ -705,26 +722,29 @@ MIntArray alembicArchiveNode::getUVShells()
 
 			Alembic::AbcGeom::IV2fGeomParam iUVs=schema.getUVsParam();
 
-		    // no interpolation for now
-			Alembic::AbcCoreAbstract::index_t index, ceilIndex;
-			getWeightAndIndex(mTime, iUVs.getTimeSampling(),
-				iUVs.getNumSamples(), index, ceilIndex);
+			if ( iUVs.valid() ){
 
-			Alembic::AbcGeom::IV2fGeomParam::Sample samp;
-			iUVs.getIndexed(samp, Alembic::Abc::ISampleSelector(index));
+				// no interpolation for now
+				Alembic::AbcCoreAbstract::index_t index, ceilIndex;
+				getWeightAndIndex(mTime, iUVs.getTimeSampling(),
+					iUVs.getNumSamples(), index, ceilIndex);
 
-			Alembic::AbcGeom::V2fArraySamplePtr uvPtr = samp.getVals();
-			Alembic::Abc::UInt32ArraySamplePtr indexPtr = samp.getIndices();
+				Alembic::AbcGeom::IV2fGeomParam::Sample samp;
+				iUVs.getIndexed(samp, Alembic::Abc::ISampleSelector(index));
 
-			unsigned int numUVs = (unsigned int)uvPtr->size();
+				Alembic::AbcGeom::V2fArraySamplePtr uvPtr = samp.getVals();
+				Alembic::Abc::UInt32ArraySamplePtr indexPtr = samp.getIndices();
 
-			//uValues.setLength(numUVs);
-			//vValues.setLength(numUVs);
+				unsigned int numUVs = (unsigned int)uvPtr->size();
 
-			for (unsigned int s = 0; s < numUVs; s++)
-			{
-				uValues.append((*uvPtr)[s].x);
-				vValues.append((*uvPtr)[s].y);
+				//uValues.setLength(numUVs);
+				//vValues.setLength(numUVs);
+
+				for (unsigned int s = 0; s < numUVs; s++)
+				{
+					uValues.append((*uvPtr)[s].x);
+					vValues.append((*uvPtr)[s].y);
+				}
 			}
 
 		}
