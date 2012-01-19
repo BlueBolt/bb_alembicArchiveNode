@@ -630,8 +630,6 @@ MIntArray alembicArchiveNode::getUVShells()
 
     std::string sceneKey = getSceneKey(false);
 
-    std::cout << "sceneKey :: " << sceneKey << std::endl;
-
     Alembic::Abc::IObject start;
 
 
@@ -643,14 +641,12 @@ MIntArray alembicArchiveNode::getUVShells()
     	return uvShells;
     }
 
-    std::cout << "start :: " << start.getFullName() << std::endl;
-
     MString objPath;
     plug  = fn.findPlug( aObjectPath );
     plug.getValue( objPath );
 
     size_t numChildren = start.getNumChildren();
-    std::cout << "numChildren :: " << numChildren << std::endl;
+
     if (numChildren == 0) return uvShells;
 
 	//list through the objects and retreve data based upon
