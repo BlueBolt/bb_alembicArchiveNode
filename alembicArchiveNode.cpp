@@ -306,7 +306,7 @@ void alembicArchiveNode::draw( M3dView& view,
 
 
     // update scene if needed
-    if (m_abcdirty) updateAbc(this);
+    //if (m_abcdirty) updateAbc(this);
 
 //    std::cout << "draw" << std::endl;
 //    timer::timer TIMER;
@@ -363,7 +363,7 @@ void alembicArchiveNode::draw( M3dView& view,
     // we change will not affect anything else maya draws afterwards.
     glPushAttrib( GL_ALL_ATTRIB_BITS );
 
-    setHolderTime();
+    //setHolderTime();
 
     // init gl shaders - DISABLED FOR NOW - not even sure if we can do this here
     // glshader.init((char *)vshader, (char *)fshader);
@@ -663,7 +663,6 @@ MIntArray alembicArchiveNode::getUVShells()
 	MFloatArray vValues;
 
 	size_t noObjects = outIObjList.size() ;
-    std::cout << "noObjects :: " << noObjects << std::endl;
 
 	for (std::vector<Alembic::Abc::IObject>::iterator i = outIObjList.begin(); i != outIObjList.end(); i++)
 	{
