@@ -434,6 +434,8 @@ bool alembicArchiveNode::isBounded() const
     return true;
 }
 
+//TODO: Make switch so if we need the shutter bounds or not (for the procedrual)
+
 MBoundingBox alembicArchiveNode::boundingBox() const
 {
     // update scene if needed
