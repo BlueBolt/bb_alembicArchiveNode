@@ -626,9 +626,14 @@ MStringArray alembicArchiveNode::getObjects()
     MPlug plug  = fn.findPlug( aAbcFile );
     plug.getValue( abcfile );
 
-    std::string sceneKey = getSceneKey(false);
+    std::string sceneKey = std::string((abcfile+"/").asChar());
 
-    Alembic::Abc::IObject start;
+    Alembic::Abc::IArchive archive = m_scene->getArchive();
+
+    Alembic::Abc::IObject start = archive.getTop();
+
+    /*
+    Alembic::Abc::IObject start = abcSceneManager.getScene(key);
 
     if (abcSceneManager.hasKey(sceneKey)){
 
@@ -637,10 +642,7 @@ MStringArray alembicArchiveNode::getObjects()
     } else {
     	return objects;
     }
-
-    MString objPath;
-    plug  = fn.findPlug( aObjectPath );
-    plug.getValue( objPath );
+	*/
 
     size_t numChildren = start.getNumChildren();
 
@@ -655,8 +657,6 @@ MStringArray alembicArchiveNode::getObjects()
 		//get the type for this object
 
 		Alembic::Abc::IObject this_object = *i;
-
-		MString ntype;
 
 	 	//cout << "object :: " <<  this_object.getFullName() << endl;
 
@@ -1139,7 +1139,7 @@ MStatus alembicArchiveNode::initialize()
     attributeAffects( aObjectPath, aBBCenter );
     attributeAffects( aObjectPath, aShowBB );
     attributeAffects( aObjectPath, aOutUVs );
-    attributeAffects( aObjectPath, aObjects );
+    //attributeAffects( aObjectPath, aObjects );
 
 
     attributeAffects( aTime, aOutFps );

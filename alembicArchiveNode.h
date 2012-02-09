@@ -149,6 +149,7 @@ public:
 
 	//std::set<std::string>  outIObjList;
 	std::vector<Alembic::Abc::IObject>  outIObjList;
+	std::vector<Alembic::Abc::IObject>  fullOutIObjList;
 
     static  MTypeId     id;
     
