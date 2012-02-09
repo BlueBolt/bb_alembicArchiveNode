@@ -127,6 +127,7 @@ public:
     static	MObject		aBB;
 
     static	MObject		aOutUVs;
+    static	MObject		aObjects;
 
     static  MObject     aFurBBPad;
     static  MObject     aFurBBMin;
@@ -156,6 +157,8 @@ public:
     static SimpleAbcViewer::SceneManager abcSceneManager;
 
     std::string m_currscenekey;
+    MStringArray m_objects;
+    MIntArray m_uvs;
     int m_bbmode;
     bool m_abcdirty;
     SimpleAbcViewer::ScenePtr m_scene;
@@ -168,6 +171,7 @@ public:
 
 	int archiveShaders(	const MStringArray & shapeNames) const;
 
+	MStringArray getObjects();
 	MIntArray getUVShells();
 	//void walk(Alembic::Abc::IObject iObj, std::set<Alembic::Abc::IObject> outIObjList);
 

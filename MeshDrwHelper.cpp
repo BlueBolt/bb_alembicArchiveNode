@@ -337,9 +337,9 @@ void MeshDrwHelper::updateArbs(Alembic::Abc::ICompoundProperty & iParent,
         m_colors.resize(m_meshP->size());
         float * CsData = (float *) CsSamp->getData();
         int csid=0;
-        for (int idx=0; idx<iIndices->size(); idx++)
+        for (int idx=0; idx<int(iIndices->size()); idx++)
         {
-            if (csid<CsSamp->size()*3) {
+            if (csid<int(CsSamp->size()*3)) {
                 m_colors[(*iIndices)[idx]] = C4f(CsData[csid],CsData[csid+1],CsData[csid+2],1);
             }
             csid+=3;
@@ -351,9 +351,9 @@ void MeshDrwHelper::updateArbs(Alembic::Abc::ICompoundProperty & iParent,
         float * OsData = (float *) OsSamp->getData();
         
         int csid=0;
-        for (int idx=0; idx<iIndices->size(); idx++)
+        for (int idx=0; idx<int(iIndices->size()); idx++)
         {
-            if (csid<CsSamp->size()*3) {
+            if (csid<int(CsSamp->size()*3)) {
                 m_colors[(*iIndices)[idx]] = C4f(CsData[csid],CsData[csid+1],CsData[csid+2],OsData[csid]);
             }
             csid+=3;

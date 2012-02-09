@@ -87,6 +87,7 @@ MObject 	alembicArchiveNode::aBBSize;
 MObject 	alembicArchiveNode::aBB;
 
 MObject 	alembicArchiveNode::aOutUVs;
+MObject 	alembicArchiveNode::aObjects;
 
 MObject     alembicArchiveNode::aFurBBPad;
 MObject     alembicArchiveNode::aFurBBMin;
@@ -139,52 +140,17 @@ void updateAbc(const void* data)
         alembicArchiveNode::abcSceneManager.removeScene(node->m_currscenekey);
         node->m_currscenekey = "";
     }
-    /*
-    //fill in the ouv attribute
-
-    MPlug uvPlug  = fn.findPlug( alembicArchiveNode::aOutUVs );
-
-    MIntArray tmpUVArray = node->getUVShells();
-
-    int nEle = tmpUVArray.length();
-
-    for(unsigned i=0; i<nEle; i++)
-    {
-    	MPlug plugElement = uvPlug.elementByLogicalIndex( i, &st) ;
-		plugElement.setValue( tmpUVArray[i] ) ;
-    }
-
-    // now we need to remove the other values from the attribute
-    if (nEle < uvPlug.numElements(&st)){
-
-    		MIntArray iarrIndexes ;	// array to hold each valid index number.
-    		unsigned nPlugEle = uvPlug.getExistingArrayAttributeIndices ( iarrIndexes, &st ) ;
-
-    		MString plugName = uvPlug.name();
-
-    		MObject node = uvPlug.node();
-    		MFnDagNode fnDAGN( node );
-    		if( fnDAGN.hasObj( node ) )
-    		{
-    			plugName = fnDAGN.fullPathName() + "." + uvPlug.partialName();
-    		}
-    		for( unsigned i=nEle; i<iarrIndexes.length(); i++ )
-    		{
-    			// using mel because there's no equivalant api method as far as i know.
-    			MString command = "removeMultiInstance -b true \"" + plugName + "[" + i + "]\"";
-    			st = MGlobal::executeCommand( command );
-    			assert( st );
-    		}
-
-
-    }*/
-
-
 
     alembicArchiveNode::abcSceneManager.addScene(file.asChar(),objectPath.asChar());
     node->m_scene=alembicArchiveNode::abcSceneManager.getScene(key);
     node->m_currscenekey = key;
     node->m_abcdirty = false;
+
+
+    node->m_uvs = node->getUVShells();
+
+    node->m_objects = node->getObjects();
+
 }
 
 void abcDirtiedCallback( MObject & nodeMO , MPlug & plug, void* data)
@@ -257,6 +223,8 @@ alembicArchiveNode::alembicArchiveNode() {
     m_bbmode = 0;
     m_currscenekey = "";
     m_abcdirty = false;
+    m_objects = MStringArray();
+    m_uvs = MIntArray();
 }
 
 alembicArchiveNode::~alembicArchiveNode() {
@@ -538,9 +506,9 @@ MStatus alembicArchiveNode::compute( const MPlug& plug, MDataBlock& data )
 
         // ----- get uvshells and change the attribute to fit
 
-        MIntArray tmpUVArray = getUVShells();
+        MIntArray tmpUVArray = m_uvs;
 
-        int nEle = tmpUVArray.length();
+        unsigned int nEle = tmpUVArray.length();
 
         MArrayDataHandle outputArray = data.outputArrayValue(aOutUVs,
                                                              &returnStatus);
@@ -560,6 +528,34 @@ MStatus alembicArchiveNode::compute( const MPlug& plug, MDataBlock& data )
 
     }
 
+    if(plug == aObjects)
+    {
+
+    	data.setClean(plug);
+
+        // ----- get uvshells and change the attribute to fit
+
+        MStringArray tmpObjArray = m_objects;
+
+        unsigned int nEle = tmpObjArray.length();
+
+        MArrayDataHandle outputArray = data.outputArrayValue(aObjects,
+                                                             &returnStatus);
+        MArrayDataBuilder builder(aObjects, nEle, &returnStatus);
+
+    	for (unsigned int idx=0; idx < nEle; ++idx)
+    	    {
+
+    		MDataHandle outHandle = builder.addElement(idx);
+    		outHandle.set(tmpObjArray[idx]);
+
+    	    }
+
+    	returnStatus = outputArray.set(builder);
+
+    	returnStatus = outputArray.setAllClean();
+
+    }
 
     if(plug == aOutFps || plug == aOutFrame )
     {
@@ -617,6 +613,62 @@ void alembicArchiveNode::walk(Alembic::Abc::IObject iObj)
 
 }
 
+MStringArray alembicArchiveNode::getObjects()
+{
+
+	MStringArray objects;
+    MStatus st = MS::kSuccess;
+
+	//double mTime = setHolderTime();
+
+    MFnDagNode fn( thisMObject() );
+    MString abcfile;
+    MPlug plug  = fn.findPlug( aAbcFile );
+    plug.getValue( abcfile );
+
+    std::string sceneKey = getSceneKey(false);
+
+    Alembic::Abc::IObject start;
+
+    if (abcSceneManager.hasKey(sceneKey)){
+
+    	start =  m_scene->getTopObject();
+
+    } else {
+    	return objects;
+    }
+
+    MString objPath;
+    plug  = fn.findPlug( aObjectPath );
+    plug.getValue( objPath );
+
+    size_t numChildren = start.getNumChildren();
+
+    if (numChildren == 0) return objects;
+
+    outIObjList.clear();
+
+	walk(start);
+
+	for (std::vector<Alembic::Abc::IObject>::iterator i = outIObjList.begin(); i != outIObjList.end(); i++)
+	{
+		//get the type for this object
+
+		Alembic::Abc::IObject this_object = *i;
+
+		MString ntype;
+
+	 	//cout << "object :: " <<  this_object.getFullName() << endl;
+
+		objects.append(MString(this_object.getFullName().c_str()));
+	}
+
+
+
+	return objects;
+
+}
+
 
 MIntArray alembicArchiveNode::getUVShells()
 {
@@ -667,7 +719,7 @@ MIntArray alembicArchiveNode::getUVShells()
 	MFloatArray uValues;
 	MFloatArray vValues;
 
-	size_t noObjects = outIObjList.size() ;
+	//size_t noObjects = outIObjList.size() ;
 
 	for (std::vector<Alembic::Abc::IObject>::iterator i = outIObjList.begin(); i != outIObjList.end(); i++)
 	{
@@ -755,10 +807,10 @@ MIntArray alembicArchiveNode::getUVShells()
 	//convert the two arrays in to a new arry of integers for the
 	//shells that this file/path contains
 
-    int minU=0;
-    int maxU=1;
-    int minV=0;
-    int maxV=1;
+	unsigned int minU=0;
+    unsigned int maxU=1;
+    unsigned int minV=0;
+    unsigned int maxV=1;
 
     for (unsigned int u=0;u < uValues.length();++u){
     	if (ceil(uValues[u]) > maxU)
@@ -770,7 +822,7 @@ MIntArray alembicArchiveNode::getUVShells()
     		maxV=int(ceil(vValues[v]));
     }
 
-    int t_minU = maxU;
+    unsigned int t_minU = maxU;
 
     for (unsigned int mu=0;mu < uValues.length();++mu){
     	if (floor(uValues[mu]) < t_minU)
@@ -780,7 +832,7 @@ MIntArray alembicArchiveNode::getUVShells()
 
     minU=t_minU;
 
-    int t_minV = maxV;
+    unsigned int t_minV = maxV;
 
 	for (unsigned int v=0;v < vValues.length();++v){
 		if (floor(vValues[v]) < t_minV)
@@ -789,11 +841,11 @@ MIntArray alembicArchiveNode::getUVShells()
 
     minV=t_minV;
 
-	for (unsigned int t=minU;t < maxU;t++){
-		for (unsigned int u=0;u<uValues.length();u++){
+	for (int t=int(minU);t < int(maxU);t++){
+		for (int u=0;u<int(uValues.length());u++){
     		if (uValues[u] > t && uValues[u] < t+1){
     			bool matching = false;
-    			for (int j = 0; (j < uvShells.length()); j++)if (uvShells[j] == t+1) matching = true;
+    			for (int j = 0; (j < int(uvShells.length())); j++)if (int(uvShells[j]) == t+1) matching = true;
     			if (!matching) uvShells.append(t+1);
     			//uvShells.append(t+1);
     		}
@@ -936,7 +988,15 @@ MStatus alembicArchiveNode::initialize()
     nAttr.setHidden(true);
 	st = addAttribute(aOutUVs);er;
 
-
+    //array of objects that this archive/path contains
+    aObjects = tAttr.create( "objects", "objs",  MFnStringData::kString,&st);
+    tAttr.setStorable(false);
+    tAttr.setReadable(true);
+    tAttr.setWritable(true);
+    tAttr.setArray(true);
+    tAttr.setUsesArrayDataBuilder(true);
+    tAttr.setHidden(true);
+	st = addAttribute(aObjects);er;
 
     aBBMin = nAttr.create( "geoBBMin", "gbbmin", MFnNumericData::k3Double);
     nAttr.setStorable(false);
@@ -1070,6 +1130,7 @@ MStatus alembicArchiveNode::initialize()
     attributeAffects( aAbcFile, aFurBB );
     attributeAffects( aAbcFile, aBBCenter );
     attributeAffects( aAbcFile, aOutUVs );
+    attributeAffects( aAbcFile, aObjects );
 
     attributeAffects( aObjectPath, aBBMin );
     attributeAffects( aObjectPath, aBBMax );
@@ -1078,6 +1139,7 @@ MStatus alembicArchiveNode::initialize()
     attributeAffects( aObjectPath, aBBCenter );
     attributeAffects( aObjectPath, aShowBB );
     attributeAffects( aObjectPath, aOutUVs );
+    attributeAffects( aObjectPath, aObjects );
 
 
     attributeAffects( aTime, aOutFps );
@@ -1089,6 +1151,7 @@ MStatus alembicArchiveNode::initialize()
     attributeAffects( aTime, aBBCenter );
     attributeAffects( aTime, aShowBB );
     attributeAffects( aTime, aOutUVs );
+    attributeAffects( aTime, aObjects );
 
     attributeAffects( aTimeOffset, aOutFps );
     attributeAffects( aTimeOffset, aOutFrame );
@@ -1099,6 +1162,7 @@ MStatus alembicArchiveNode::initialize()
     attributeAffects( aTimeOffset, aBBCenter );
     attributeAffects( aTimeOffset, aShowBB );
     attributeAffects( aTimeOffset, aOutUVs );
+    attributeAffects( aTimeOffset, aObjects );
     
     attributeAffects( aShutterOpen, aOutFps );
     attributeAffects( aShutterOpen, aBBMin );
@@ -1107,6 +1171,7 @@ MStatus alembicArchiveNode::initialize()
     attributeAffects( aShutterOpen, aFurBBMax );
     attributeAffects( aShutterOpen, aShowBB );
     attributeAffects( aShutterOpen, aOutUVs );
+    attributeAffects( aShutterOpen, aObjects );
 
     attributeAffects( aShutterClose, aOutFps );
     attributeAffects( aShutterClose, aBBMin );
@@ -1115,6 +1180,7 @@ MStatus alembicArchiveNode::initialize()
     attributeAffects( aShutterClose, aFurBBMax );
     attributeAffects( aShutterClose, aShowBB );
     attributeAffects( aShutterClose, aOutUVs );
+    attributeAffects( aShutterClose, aObjects );
 
     attributeAffects( aFurBBPad, aFurBBMin );
     attributeAffects( aFurBBPad, aFurBBMax );
