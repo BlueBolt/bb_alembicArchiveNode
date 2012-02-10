@@ -97,7 +97,9 @@ MObject 	alembicArchiveNode::aFurBB;
 
 MObject     alembicArchiveNode::aBBCenter;
 MObject     alembicArchiveNode::aFurLOD;
+
 MObject		alembicArchiveNode::aShowBB;
+MObject		alembicArchiveNode::aShowGL;
 
 MObject		alembicArchiveNode::aFlipV;
 MObject		alembicArchiveNode::aPolyAsSubD;
@@ -149,7 +151,7 @@ void updateAbc(const void* data)
 
     node->m_uvs = node->getUVShells();
 
-    node->m_objects = node->getObjects();
+    //node->m_objects = node->getObjects();
 
 }
 
@@ -273,6 +275,10 @@ void alembicArchiveNode::draw( M3dView& view,
 
 	MObject thisNode = thisMObject();
 
+	MBoundingBox bb = boundingBox();
+	MVector bmin,bmax;
+	bmin=bb.min();
+	bmax=bb.max();
 
     // update scene if needed
     //if (m_abcdirty) updateAbc(this);
@@ -290,7 +296,6 @@ void alembicArchiveNode::draw( M3dView& view,
     } else {
     	col = MColor(0.7,0.5,0.5);
     }
-
 
     /*
     switch (status)  // From M3dView::DisplayStatus status  in the draw() command
@@ -354,7 +359,9 @@ void alembicArchiveNode::draw( M3dView& view,
 
     MFnDagNode fn( thisNode );
 
-    bool doGL = 1;
+    MPlug glPlug(thisNode, aShowGL );
+    bool doGL = glPlug.asBool() ;
+
     // draw the "scene" from the alembic file
 
     bool proxy = false;
@@ -363,9 +370,15 @@ void alembicArchiveNode::draw( M3dView& view,
     plug.getValue( proxy );
 
     std::string sceneKey = getSceneKey(proxy);
-    if (abcSceneManager.hasKey(sceneKey) && doGL)
+    if (abcSceneManager.hasKey(sceneKey) && doGL){
     	abcSceneManager.getScene(sceneKey)->draw(abcSceneState);
-        
+    }
+    else if (abcSceneManager.hasKey(sceneKey) && !doGL){
+    	drawABox(bmin, bmax,true);
+    }
+
+
+
     glFlush();
 
     // restore the old openGL settings
@@ -380,15 +393,14 @@ void alembicArchiveNode::draw( M3dView& view,
 
     if (doBB){
 
-    	MBoundingBox bb = boundingBox();
 
     	//MPlug geoBBPlug( thisNode, aBB );
-    	MVector bmin,bmax;
-    	bmin=bb.min();
-    	bmax=bb.max();
+    	//MVector bmin,bmax;
+    	//bmin=bb.min();
+    	//bmax=bb.max();
 
     	//st = bbValue(geoBBPlug, bmin,bmax);
-    	drawABox(bmin, bmax);
+    	drawABox(bmin, bmax,false);
 
     }
 
@@ -535,7 +547,7 @@ MStatus alembicArchiveNode::compute( const MPlug& plug, MDataBlock& data )
 
         // ----- get uvshells and change the attribute to fit
 
-        MStringArray tmpObjArray = m_objects;
+        MStringArray tmpObjArray = getObjects();
 
         unsigned int nEle = tmpObjArray.length();
 
@@ -1070,6 +1082,11 @@ MStatus alembicArchiveNode::initialize()
 	nAttr.setKeyable( true );
 	st = addAttribute(aShowBB);
 
+	aShowGL = nAttr.create( "showGL", "sgl", MFnNumericData::kBoolean, 1, &st);
+    nAttr.setHidden(false);
+	nAttr.setKeyable( true );
+	st = addAttribute(aShowGL);
+
     aFlipV = nAttr.create( "flipV", "fv", MFnNumericData::kBoolean, 0, &st);
     nAttr.setHidden(false);
 	nAttr.setKeyable( true );
@@ -1191,47 +1208,98 @@ MStatus alembicArchiveNode::initialize()
 
 //
 // simple bounding box creator
-void alembicArchiveNode::drawABox(const MVector &bmin, const MVector &bmax) {
-	glBegin( GL_LINES );
+void alembicArchiveNode::drawABox(const MVector &bmin, const MVector &bmax,bool poly=false) {
 
+
+
+
+	if (poly){
+		glBegin(GL_QUADS);
+	} else {
+		glBegin( GL_LINES );
+	}
+
+	glEnable(GL_CULL_FACE);
+	//glFrontFace(GL_CW);
 	////////////////// BASE
 	glVertex3f(float(bmin.x),float(bmin.y),float(bmin.z));
-	glVertex3f(float(bmin.x),float(bmin.y),float(bmax.z));
+	//glVertex3f(float(bmin.x),float(bmin.y),float(bmax.z));
 
 	glVertex3f(float(bmin.x),float(bmin.y),float(bmax.z));
-	glVertex3f(float(bmax.x),float(bmin.y),float(bmax.z));
+	//glVertex3f(float(bmax.x),float(bmin.y),float(bmax.z));
 
 	glVertex3f(float(bmax.x),float(bmin.y),float(bmax.z));
-	glVertex3f(float(bmax.x),float(bmin.y),float(bmin.z));
+	//glVertex3f(float(bmax.x),float(bmin.y),float(bmin.z));
 
 	glVertex3f(float(bmax.x),float(bmin.y),float(bmin.z));
-	glVertex3f(float(bmin.x),float(bmin.y),float(bmin.z));
+	//glVertex3f(float(bmin.x),float(bmin.y),float(bmin.z));
 
 	////////////////// TOP
 	glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
-	glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
+	//glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
 
 	glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
-	glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
+	//glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
 
 	glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
-	glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
+	//glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
 
 	glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
-	glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
+	//glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
 
-	/////////////////// LEGS
+	/////////////////// FRONT
 	glVertex3f(float(bmin.x),float(bmin.y),float(bmin.z));
+	//glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
+
 	glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
+	//glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
 
-	glVertex3f(float(bmin.x),float(bmin.y),float(bmax.z));
-	glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
-
-	glVertex3f(float(bmax.x),float(bmin.y),float(bmax.z));
-	glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
+	glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
+	//glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
 
 	glVertex3f(float(bmax.x),float(bmin.y),float(bmin.z));
+	//glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
+
+	/////////////////// BACK
+	glVertex3f(float(bmin.x),float(bmin.y),float(bmax.z));
+	//glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
+
+	glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
+	//glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
+
+	glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
+	//glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
+
+	glVertex3f(float(bmax.x),float(bmin.y),float(bmax.z));
+	//glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
+
+
+	/////////////////// LEFT
+	glVertex3f(float(bmin.x),float(bmin.y),float(bmin.z));
+	//glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
+
+	glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
+	//glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
+
+	glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
+	//glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
+
+	glVertex3f(float(bmin.x),float(bmin.y),float(bmax.z));
+	//glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
+
+	/////////////////// RIGHT
+	glVertex3f(float(bmax.x),float(bmin.y),float(bmin.z));
+	//glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
+
 	glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
+	//glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
+
+	glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
+	//glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
+
+	glVertex3f(float(bmax.x),float(bmin.y),float(bmax.z));
+	//glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
+
 	glEnd();
 
 	// make the corners big points

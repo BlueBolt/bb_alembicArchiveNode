@@ -140,6 +140,7 @@ public:
     static  MObject     aFurLOD;
     
     static  MObject     aShowBB;
+    static  MObject     aShowGL;
     static  MObject     aFlipV;
 //    static  MObject     aShowFurBB;
     static  MObject     aPolyAsSubD;
@@ -180,7 +181,7 @@ public:
 
 private:
 
-	void drawABox(const MVector &bbmin, const MVector &bbmax) ;
+	void drawABox(const MVector &bbmin, const MVector &bbmax, bool poly) ;
 
 	void walk(Alembic::Abc::IObject iObj);
 
