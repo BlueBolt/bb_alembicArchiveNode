@@ -1212,109 +1212,104 @@ void alembicArchiveNode::drawABox(const MVector &bmin, const MVector &bmax,bool 
 
 
 
-
 	if (poly){
+/*
+		GLfloat vertices[] = {float(bmax.x),float(bmax.y),float(bmax.z), float(bmin.x),float(bmax.y),float(bmax.z), float(bmin.x),float(bmin.y),float(bmax.z),float(bmin.x),float(bmax.y),float(bmin.z),
+			float(bmax.x), float(bmax.y), float(bmin.z), float(bmin.x), float(bmax.y), float(bmin.z), float(bmin.x), float(bmin.y), float(bmin.z), float(bmax.x), float(bmin.y), float(bmin.z),
+			float(bmax.x), float(bmax.y), float(bmax.z), float(bmax.x), float(bmin.y), float(bmax.z), float(bmax.x), float(bmin.y), float(bmin.z), float(bmax.x), float(bmax.y), float(bmin.z),
+			float(bmin.x), float(bmin.y), float(bmax.z), float(bmin.x), float(bmin.y), float(bmin.z), float(bmax.x), float(bmin.y), float(bmin.z), float(bmax.x), float(bmin.y), float(bmax.z),
+			float(bmin.x), float(bmax.y), float(bmax.z), float(bmax.x), float(bmax.y), float(bmax.z), float(bmax.x), float(bmax.y), float(bmin.z), float(bmin.x), float(bmax.y), float(bmin.z),
+			float(bmin.x), float(bmax.y), float(bmin.z), float(bmin.x), float(bmin.y), float(bmin.z), float(bmin.x), float(bmin.y), float(bmax.z), float(bmin.x), float(bmax.y), float(bmax.z)};
+
+		GLfloat colors[] = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+								   1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0,
+								   1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0,
+								   0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0,
+								   1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0,
+								   0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0};
+
+		GLfloat normals[] = {0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0,
+									0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0,
+									1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0,
+									0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0,
+									0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0,
+									-1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0};
+*/
 		glBegin(GL_QUADS);
+    	glShadeModel( GL_FLAT );
+
 	} else {
 		glBegin( GL_LINES );
 	}
-
-	glEnable(GL_CULL_FACE);
-	//glFrontFace(GL_CW);
-	////////////////// BASE
-	glVertex3f(float(bmin.x),float(bmin.y),float(bmin.z));
-	//glVertex3f(float(bmin.x),float(bmin.y),float(bmax.z));
-
-	glVertex3f(float(bmin.x),float(bmin.y),float(bmax.z));
-	//glVertex3f(float(bmax.x),float(bmin.y),float(bmax.z));
-
-	glVertex3f(float(bmax.x),float(bmin.y),float(bmax.z));
-	//glVertex3f(float(bmax.x),float(bmin.y),float(bmin.z));
-
-	glVertex3f(float(bmax.x),float(bmin.y),float(bmin.z));
-	//glVertex3f(float(bmin.x),float(bmin.y),float(bmin.z));
-
-	////////////////// TOP
-	glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
-	//glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
-
-	glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
-	//glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
-
-	glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
-	//glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
-
-	glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
-	//glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
-
-	/////////////////// FRONT
-	glVertex3f(float(bmin.x),float(bmin.y),float(bmin.z));
-	//glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
-
-	glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
-	//glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
-
-	glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
-	//glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
-
-	glVertex3f(float(bmax.x),float(bmin.y),float(bmin.z));
-	//glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
-
-	/////////////////// BACK
-	glVertex3f(float(bmin.x),float(bmin.y),float(bmax.z));
-	//glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
-
-	glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
-	//glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
-
-	glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
-	//glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
-
-	glVertex3f(float(bmax.x),float(bmin.y),float(bmax.z));
-	//glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
+	//glEnable(GL_CULL_FACE);
+	//glCullFace(GL_BACK);
 
 
-	/////////////////// LEFT
-	glVertex3f(float(bmin.x),float(bmin.y),float(bmin.z));
-	//glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
+		////////////////// BASE
+    	glNormal3f(0, -1, 0);
+		glVertex3f(float(bmax.x),float(bmin.y),float(bmin.z));
+		glVertex3f(float(bmax.x),float(bmin.y),float(bmax.z));
+		glVertex3f(float(bmin.x),float(bmin.y),float(bmax.z));
+		glVertex3f(float(bmin.x),float(bmin.y),float(bmin.z));
 
-	glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
-	//glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
 
-	glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
-	//glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
+		////////////////// TOP
 
-	glVertex3f(float(bmin.x),float(bmin.y),float(bmax.z));
-	//glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
+    	glNormal3f(0, 1, 0);
+		glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
+		glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
+		glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
+		glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
 
-	/////////////////// RIGHT
-	glVertex3f(float(bmax.x),float(bmin.y),float(bmin.z));
-	//glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
+		/////////////////// BACK -- correct
 
-	glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
-	//glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
+    	glNormal3f(0, 0, 1);
+		glVertex3f(float(bmax.x),float(bmin.y),float(bmin.z));
+		glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
+		glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
+		glVertex3f(float(bmin.x),float(bmin.y),float(bmin.z));
 
-	glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
-	//glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
+		/////////////////// FRONT -- correct
 
-	glVertex3f(float(bmax.x),float(bmin.y),float(bmax.z));
-	//glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
+    	glNormal3f(0, 0, 1);
+		glVertex3f(float(bmax.x),float(bmin.y),float(bmax.z));
+		glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
+		glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
+		glVertex3f(float(bmin.x),float(bmin.y),float(bmax.z));
+
+		/////////////////// LEFT
+
+    	glNormal3f(-1, 0, 0);
+		glVertex3f(float(bmin.x),float(bmin.y),float(bmax.z));
+		glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
+		glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
+		glVertex3f(float(bmin.x),float(bmin.y),float(bmin.z));
+
+		/////////////////// RIGHT
+
+    	glNormal3f(-1, 0, 0);
+		glVertex3f(float(bmax.x),float(bmin.y),float(bmax.z));
+		glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
+		glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
+		glVertex3f(float(bmax.x),float(bmin.y),float(bmin.z));
 
 	glEnd();
 
+	if (!poly){
 	// make the corners big points
-	glPushAttrib(GL_CURRENT_BIT);
-	glPointSize(5);
-	glBegin( GL_POINTS );
-	glVertex3f(float(bmin.x),float(bmin.y),float(bmin.z));
-	glVertex3f(float(bmin.x),float(bmin.y),float(bmax.z));
-	glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
-	glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
-	glVertex3f(float(bmax.x),float(bmin.y),float(bmin.z));
-	glVertex3f(float(bmax.x),float(bmin.y),float(bmax.z));
-	glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
-	glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
-	glEnd();
+		glPushAttrib(GL_CURRENT_BIT);
+		glPointSize(5);
+		glBegin( GL_POINTS );
+		glVertex3f(float(bmin.x),float(bmin.y),float(bmin.z));
+		glVertex3f(float(bmin.x),float(bmin.y),float(bmax.z));
+		glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
+		glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
+		glVertex3f(float(bmax.x),float(bmin.y),float(bmin.z));
+		glVertex3f(float(bmax.x),float(bmin.y),float(bmax.z));
+		glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
+		glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
+		glEnd();
+	}
 	glPopAttrib();
 
 }
