@@ -426,12 +426,12 @@ MBoundingBox alembicArchiveNode::boundingBox() const
     std::string sceneKey = getSceneKey(false);
     if (abcSceneManager.hasKey(sceneKey)) {
         SimpleAbcViewer::Box3d bb;
- /*       if (!m_bbmode) {
+        if (m_bbmode) {
             setHolderTime(true); // first check bb at shutterClose
             bb = abcSceneManager.getScene(sceneKey)->getBounds();
             bbox.expand( MPoint( bb.min.x, bb.min.y, bb.min.z ) );
             bbox.expand( MPoint( bb.max.x, bb.max.y, bb.max.z ) );
-        }*/
+        }
         setHolderTime(); // ...then at shutterOpen
         bb = m_scene->getBounds();
         bbox.expand( MPoint( bb.min.x, bb.min.y, bb.min.z ) );
@@ -495,7 +495,7 @@ MStatus alembicArchiveNode::compute( const MPlug& plug, MDataBlock& data )
 
     if(plug == aBBCenter )
     {
-        m_bbmode = 1; // switch this on for a sec
+        m_bbmode = 0; // switch this on for a sec
 
         MBoundingBox bb = boundingBox();
 
@@ -973,10 +973,10 @@ MStatus alembicArchiveNode::initialize()
     uAttr.setStorable(true);
     uAttr.setKeyable(true);
 
-    aShutterOpen = nAttr.create( "shutterOpen", "so", MFnNumericData::kFloat , -0.5 );
+    aShutterOpen = nAttr.create( "shutterOpen", "so", MFnNumericData::kFloat , -0.25 );
     nAttr.setStorable(true);
     nAttr.setKeyable(true);
-    aShutterClose = nAttr.create( "shutterClose", "sc", MFnNumericData::kFloat, 0.5 );
+    aShutterClose = nAttr.create( "shutterClose", "sc", MFnNumericData::kFloat, 0.25 );
     nAttr.setStorable(true);
     nAttr.setKeyable(true);
 
@@ -1392,7 +1392,7 @@ MStatus alembicArchiveNode::emitCache(float relativeFrame)  {
 //	MPlug BBPlug( thisNode, aBB );
 //	MVector bmin,bmax;
 //	st= bbValue(BBPlug, bmin, bmax) ;
-
+	m_bbmode = 1;
 	MBoundingBox bb = boundingBox();
 
 	//MPlug geoBBPlug( thisNode, aBB );
@@ -1403,6 +1403,8 @@ MStatus alembicArchiveNode::emitCache(float relativeFrame)  {
 	MFloatVector bminf(bmin);
 	MFloatVector bmaxf(bmax);
 	RtBound bound = { bminf.x, bmaxf.x, bminf.y, bmaxf.y, bminf.z, bmaxf.z } ;
+
+	m_bbmode = 0;
 ////////////////////////////////////
 
 	RtString * progData = new RtString[2];
