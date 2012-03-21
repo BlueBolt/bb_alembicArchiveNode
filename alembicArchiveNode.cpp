@@ -149,7 +149,8 @@ void updateAbc(const void* data)
     {
         MString theError = "Cannot read file " + fileName;
         printError(theError);
-    }
+
+    } else {
 
 	//if ( abcfexists(file.asChar()) ){
 		MString mkey = fileName+"/"+objectPath;
@@ -168,7 +169,7 @@ void updateAbc(const void* data)
 
 		node->m_uvs = node->getUVShells();
     //}
-
+    }
     //node->m_objects = node->getObjects();
 
 }
@@ -1393,14 +1394,20 @@ MStatus alembicArchiveNode::emitCache(float relativeFrame)  {
 	///////////// Get time with offset ///////////////////////
 
 	MPlug timePlug( thisNode, aTime );
-	float time;
+	MTime time;
 	timePlug.getValue( time );
+	//cerr << "time :: " <<  time << endl;
 
 	MPlug timeOffsetPlug( thisNode, aTimeOffset );
-	float timeOffset;
+	MTime timeOffset;
 	timeOffsetPlug.getValue( timeOffset );
+	//cerr << "timeOffset :: " <<  timeOffset << endl;
 
-	float o_time=time+timeOffset;
+	//float o_time=time+timeOffset;
+	float o_time=time.as(MTime::kFilm)+timeOffset.as(MTime::kFilm);
+	//cerr << "o_time :: " <<  o_time << endl;
+
+
 
 	///////////// Get polyAsSubD ///////////////////////
 
