@@ -160,7 +160,7 @@ void updateAbc(const void* data)
 			node->m_currscenekey = "";
 		}
 
-		alembicArchiveNode::abcSceneManager.addScene(file.asChar(),objectPath.asChar());
+		alembicArchiveNode::abcSceneManager.addScene(fileName.asChar(),objectPath.asChar());
 		node->m_scene=alembicArchiveNode::abcSceneManager.getScene(key);
 		node->m_currscenekey = key;
 		node->m_abcdirty = false;
