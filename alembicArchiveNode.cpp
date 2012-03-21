@@ -41,6 +41,7 @@
 
 #include <maya/MCommandResult.h>
 #include <math.h>
+#include <sys/stat.h>
 
 #include <bb_MayaIds.h>
 
@@ -124,36 +125,55 @@ void updateAbc(const void* data)
     alembicArchiveNode::alembicArchiveNode *node = (alembicArchiveNode::alembicArchiveNode *)data;
 
     MFnDagNode fn( node->thisMObject() );
-    MString file;
+    MString fileName;
     MPlug fplug  = fn.findPlug( alembicArchiveNode::aAbcFile );
-    fplug.getValue(file);
+    fplug.getValue(fileName);
     
     // expand env variables
-    file = file.expandFilePath();
+    fileName = fileName.expandFilePath();
     
     MString objectPath;
     MPlug opplug  = fn.findPlug( alembicArchiveNode::aObjectPath );
     opplug.getValue(objectPath);
+    //catch if the file exists
 
-    MString mkey = file+"/"+objectPath;
-    std::string key = mkey.asChar();//node->getSceneKey();
+	//struct stat buffer ;
 
-    if (node->m_currscenekey != key) {
-        alembicArchiveNode::abcSceneManager.removeScene(node->m_currscenekey);
-        node->m_currscenekey = "";
+
+    // no caching!
+    Alembic::Abc::IArchive archive(Alembic::AbcCoreHDF5::ReadArchive(),
+        fileName.asChar(), Alembic::Abc::ErrorHandler::Policy(),
+        Alembic::AbcCoreAbstract::ReadArraySampleCachePtr());
+
+    if (!archive.valid())
+    {
+        MString theError = "Cannot read file " + fileName;
+        printError(theError);
     }
 
-    alembicArchiveNode::abcSceneManager.addScene(file.asChar(),objectPath.asChar());
-    node->m_scene=alembicArchiveNode::abcSceneManager.getScene(key);
-    node->m_currscenekey = key;
-    node->m_abcdirty = false;
+	//if ( abcfexists(file.asChar()) ){
+		MString mkey = fileName+"/"+objectPath;
+		std::string key = mkey.asChar();//node->getSceneKey();
+
+		if (node->m_currscenekey != key) {
+			alembicArchiveNode::abcSceneManager.removeScene(node->m_currscenekey);
+			node->m_currscenekey = "";
+		}
+
+		alembicArchiveNode::abcSceneManager.addScene(file.asChar(),objectPath.asChar());
+		node->m_scene=alembicArchiveNode::abcSceneManager.getScene(key);
+		node->m_currscenekey = key;
+		node->m_abcdirty = false;
 
 
-    node->m_uvs = node->getUVShells();
+		node->m_uvs = node->getUVShells();
+    //}
 
     //node->m_objects = node->getObjects();
 
 }
+
+
 
 void abcDirtiedCallback( MObject & nodeMO , MPlug & plug, void* data)
 {
@@ -1370,6 +1390,18 @@ MStatus alembicArchiveNode::emitCache(float relativeFrame)  {
 	bool flipV;
 	flipVPlug.getValue( flipV );
 
+	///////////// Get time with offset ///////////////////////
+
+	MPlug timePlug( thisNode, aTime );
+	float time;
+	timePlug.getValue( time );
+
+	MPlug timeOffsetPlug( thisNode, aTimeOffset );
+	float timeOffset;
+	timeOffsetPlug.getValue( timeOffset );
+
+	float o_time=time+timeOffset;
+
 	///////////// Get polyAsSubD ///////////////////////
 
 	MPlug subDPlug( thisNode, aPolyAsSubD );
@@ -1431,7 +1463,7 @@ MStatus alembicArchiveNode::emitCache(float relativeFrame)  {
 	argsString += " -filename ";
 	argsString += abcFile;
 	argsString += " -frame ";
-	argsString += relativeFrame;
+	argsString += o_time;
 
  	//cerr << "argsString :: " <<  argsString << endl;
 

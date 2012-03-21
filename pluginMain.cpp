@@ -44,7 +44,7 @@ File:pluginMain.cpp
 MStatus initializePlugin( MObject obj )
 { 
     MStatus   st;
-    const char * pluginVersion = "0.2.8";
+    const char * pluginVersion = "0.2.9";
     MFnPlugin plugin( obj, "BlueBolt Ltd.",pluginVersion, "Any");
 
     st = plugin.registerNode( "alembicArchiveNode", alembicArchiveNode::id, alembicArchiveNode::creator, alembicArchiveNode::initialize, MPxNode::kLocatorNode );

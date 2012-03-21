@@ -231,5 +231,11 @@ inline MStatus bbValue(const MPlug &bbPlug, MVector &bmin, MVector &bmax) {
 	bmax=MVector(maxx,maxy,maxz);
 	return MS::kSuccess;
 }
-
+/*
+inline bool abcfexists(const char *filename)
+{
+  ifstream ifile(filename);
+  return ifile;
+}
+*/
 #endif
