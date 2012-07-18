@@ -68,42 +68,49 @@
 #include "boost/foreach.hpp"
 
 // The id is a 32bit value used to identify this type of node in the binary file format.
-MTypeId     alembicArchiveNode::id( k_alembicArchiveNode );
+MTypeId    alembicArchiveNode::id( k_alembicArchiveNode );
 
-MObject     alembicArchiveNode::aAbcFile;
-MObject     alembicArchiveNode::aObjectPath;
+MObject    alembicArchiveNode::aAbcFile;
+MObject    alembicArchiveNode::aObjectPath;
 
-MObject     alembicArchiveNode::aShowProxy;
-MObject     alembicArchiveNode::aProxyPath;
+MObject    alembicArchiveNode::aShowProxy;
+MObject    alembicArchiveNode::aProxyPath;
 
-MObject     alembicArchiveNode::aTime;
-MObject     alembicArchiveNode::aTimeOffset;
-MObject     alembicArchiveNode::aShutterOpen;
-MObject     alembicArchiveNode::aShutterClose;
-MObject     alembicArchiveNode::aOutFps;
-MObject     alembicArchiveNode::aOutFrame;
-MObject     alembicArchiveNode::aBBMin;
-MObject     alembicArchiveNode::aBBMax;
-MObject 	alembicArchiveNode::aBBSize;
-MObject 	alembicArchiveNode::aBB;
+MObject    alembicArchiveNode::aTime;
+MObject    alembicArchiveNode::aTimeOffset;
+MObject    alembicArchiveNode::aShutterOpen;
+MObject    alembicArchiveNode::aShutterClose;
+MObject    alembicArchiveNode::aOutFps;
+MObject    alembicArchiveNode::aOutFrame;
+MObject    alembicArchiveNode::aBBMin;
+MObject    alembicArchiveNode::aBBMax;
+MObject    alembicArchiveNode::aBBSize;
+MObject    alembicArchiveNode::aBB;
 
-MObject 	alembicArchiveNode::aOutUVs;
-MObject 	alembicArchiveNode::aObjects;
+MObject    alembicArchiveNode::aOutUVs;
+MObject    alembicArchiveNode::aObjects;
 
-MObject     alembicArchiveNode::aFurBBPad;
-MObject     alembicArchiveNode::aFurBBMin;
-MObject     alembicArchiveNode::aFurBBMax;
-MObject 	alembicArchiveNode::aFurBBSize;
-MObject 	alembicArchiveNode::aFurBB;
+MObject    alembicArchiveNode::aFurBBPad;
+MObject    alembicArchiveNode::aFurBBMin;
+MObject    alembicArchiveNode::aFurBBMax;
+MObject    alembicArchiveNode::aFurBBSize;
+MObject    alembicArchiveNode::aFurBB;
 
-MObject     alembicArchiveNode::aBBCenter;
-MObject     alembicArchiveNode::aFurLOD;
+MObject    alembicArchiveNode::aBBCenter;
+MObject    alembicArchiveNode::aFurLOD;
 
-MObject		alembicArchiveNode::aShowBB;
-MObject		alembicArchiveNode::aShowGL;
+MObject    alembicArchiveNode::aShowBB;
+MObject    alembicArchiveNode::aShowGL;
 
-MObject		alembicArchiveNode::aFlipV;
-MObject		alembicArchiveNode::aPolyAsSubD;
+MObject    alembicArchiveNode::aFlipV;
+MObject    alembicArchiveNode::aPolyAsSubD;
+
+MObject    alembicArchiveNode::aSubDIterations;
+MObject    alembicArchiveNode::aSubDUVSmoothing;
+
+MObject    alembicArchiveNode::aExportFaceIds;
+
+
 
 
 SimpleAbcViewer::SceneState alembicArchiveNode::abcSceneState;
@@ -1405,6 +1412,7 @@ MStatus alembicArchiveNode::emitCache(float relativeFrame)  {
 
 	//float o_time=time+timeOffset;
 	float o_time=time.as(MTime::kFilm)+timeOffset.as(MTime::kFilm);
+	//float o_time=relativeFrame+timeOffset.as(MTime::kFilm);
 	//cerr << "o_time :: " <<  o_time << endl;
 
 

@@ -144,7 +144,12 @@ public:
     static  MObject     aFlipV;
 //    static  MObject     aShowFurBB;
     static  MObject     aPolyAsSubD;
-//    static  MObject     aExportFaceIds;
+
+    // Arnold stuff
+    static  MObject     aSubDIterations;
+    static  MObject     aSubDUVSmoothing;
+
+    static  MObject     aExportFaceIds;
 //    static  MObject     aFaceIdAttributeName;
 
 
