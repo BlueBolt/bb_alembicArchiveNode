@@ -28,14 +28,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 Author: Ashley Retallack - ashley-r@blue-bolt.com
 
-File:AEalembicArchiveNodeTemplate.mel
+File:AEbb_alembicArchiveshapeTemplate.mel
 
 
 **/
 
 
 
-global proc AEalembicArchiveNodeTemplate (string $nodeName) {
+global proc AEbb_alembicArchiveShapeTemplate (string $nodeName) {
 
 	
 	
@@ -56,7 +56,9 @@ global proc AEalembicArchiveNodeTemplate (string $nodeName) {
 		editorTemplate -addControl "furBbPad";	
 		editorTemplate -addControl "showBoundingBox";			
 		editorTemplate -addControl "flipV";			
-		editorTemplate -addControl "polyAsSubD";		
+		editorTemplate -addControl "polyAsSubD";	
+		editorTemplate -addControl "ai_subDIterations";
+		editorTemplate -addControl "ai_subDUVSmoothing";		
 		
 	editorTemplate -endLayout;
 	
@@ -72,10 +74,10 @@ global proc AEalembicArchiveNodeTemplate (string $nodeName) {
 	editorTemplate -suppress "outFrame" ;
 	
 	
-	editorTemplate -suppress "geoBoundingBox" ;
-	editorTemplate -suppress "geoBbMin" ;
-	editorTemplate -suppress "geoBbMax" ;
-	editorTemplate -suppress "geoBbSize" ;
+	//editorTemplate -suppress "geoBoundingBox" ;
+	//editorTemplate -suppress "geoBbMin" ;
+	//editorTemplate -suppress "geoBbMax" ;
+	//editorTemplate -suppress "geoBbSize" ;
 	
 	//hide the maya defaults
 	

@@ -37,55 +37,58 @@
 PROJECT( ALEMBIC_ARCHIVE_NODE_MAYA_MODULE )
 
 SET( H_FILES
-alembicArchiveNode.h
-Foundation.h
-IPolyMeshDrw.h
-PathUtil.h
-timer.h
-Drawable.h
-GlShaderHolder.h
-IXformDrw.h
-Scene.h
-Transport.h
-DrawContext.h
-IObjectDrw.h
-MeshDrwHelper.h
-SceneManager.h
-delightCacheAlembic.h
-  CameraHelper.h
-  CreateSceneHelper.h
-  LocatorHelper.h
-  MeshHelper.h
-  NodeIteratorVisitorHelper.h
-  NurbsCurveHelper.h
-  NurbsSurfaceHelper.h
-  PointHelper.h
-  util.h
-  XformHelper.h
+	bb_alembicArchiveShape.h
+	Foundation.h
+	IPolyMeshDrw.h
+	ISubDDrw.h
+	PathUtil.h
+	timer.h
+	Drawable.h
+	GlShaderHolder.h
+	IXformDrw.h
+	Scene.h
+	Transport.h
+	DrawContext.h
+	IObjectDrw.h
+	MeshDrwHelper.h
+	SceneManager.h
+	delightCacheAlembic.h
+	CameraHelper.h
+	CreateSceneHelper.h
+	LocatorHelper.h
+	MeshHelper.h
+	NodeIteratorVisitorHelper.h
+	NurbsCurveHelper.h
+	NurbsSurfaceHelper.h
+	PointHelper.h
+	util.h
+	XformHelper.h
 )
 
 SET( CXX_FILES
-alembicArchiveNode.cpp
-GlShaderHolder.cpp
-IObjectDrw.cpp
-IPolyMeshDrw.cpp
-IXformDrw.cpp
-MeshDrwHelper.cpp
-PathUtil.cpp
-pluginMain.cpp
-Scene.cpp
-Transport.cpp
-delightCacheAlembic.cpp
-  CameraHelper.cpp
-  CreateSceneHelper.cpp
-  LocatorHelper.cpp
-  MeshHelper.cpp
-  NurbsCurveHelper.cpp
-  NurbsSurfaceHelper.cpp
-  NodeIteratorVisitorHelper.cpp
-  PointHelper.cpp
-  util.cpp
-  XformHelper.cpp
+	bb_alembicArchiveShape.cpp
+	GlShaderHolder.cpp
+	IObjectDrw.cpp
+	IPolyMeshDrw.cpp
+	ISubDDrw.cpp
+	IXformDrw.cpp
+	MeshDrwHelper.cpp
+	PathUtil.cpp
+	pluginMain.cpp
+	Scene.cpp
+	Transport.cpp
+	delightCacheAlembic.cpp
+	BB_AlembicArchiveTranslator.cpp
+	CameraHelper.cpp
+	CreateSceneHelper.cpp
+	LocatorHelper.cpp
+	MeshHelper.cpp
+	NurbsCurveHelper.cpp
+	NurbsSurfaceHelper.cpp
+	NodeIteratorVisitorHelper.cpp
+	PointHelper.cpp
+	util.cpp
+	XformHelper.cpp
 )
 
 SET( SOURCE_FILES ${CXX_FILES} ${H_FILES} )
@@ -101,21 +104,25 @@ INCLUDE_DIRECTORIES( ${ALEMBIC_HDF5_INCLUDE_PATH} )
 INCLUDE_DIRECTORIES( ".." )
 INCLUDE_DIRECTORIES( "../lib" )
 INCLUDE_DIRECTORIES( ${ALEMBIC_PRMAN_INCLUDE_PATH} )
+INCLUDE_DIRECTORIES( ${ALEMBIC_ARNOLD_INCLUDE_PATH} )
+INCLUDE_DIRECTORIES( ${ALEMBIC_MTOA_INCLUDE_PATH} ) # Lets hard codee this path for now, later we will add a cmake file
 INCLUDE_DIRECTORIES( "/development/playground/maya/include" )
 
-ADD_MAYA_CXX_PLUGIN( alembicArchiveNode ${SOURCE_FILES} )
-TARGET_LINK_LIBRARIES( alembicArchiveNode
+ADD_MAYA_CXX_PLUGIN( bb_alembicArchiveShape ${SOURCE_FILES} )
+TARGET_LINK_LIBRARIES( bb_alembicArchiveShape
   ${MAYA_LIBRARIES}
   ${CORE_LIBS}
   ${ALEMBIC_HDF5_LIBS}
   ${ALEMBIC_PRMAN_LIBPRMAN}
   ${ALEMBIC_GL_LIBS}
   ${ALEMBIC_ILMBASE_LIBS}
+  ${ALEMBIC_MTOA_LIBMTOA}
+  ${ALEMBIC_ARNOLD_LIBARNOLD}
   ${Boost_PROGRAM_OPTIONS_LIBRARY}
   ${CMAKE_THREAD_LIBS_INIT}
   ${ZLIB_LIBRARIES} ${EXTERNAL_MATH_LIBS} )
 
-INSTALL( TARGETS alembicArchiveNode
+INSTALL( TARGETS bb_alembicArchiveShape
          DESTINATION maya/$ENV{MAYA_VERSION}/plug-ins )
 
 

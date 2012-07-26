@@ -1,5 +1,5 @@
 //******************************************************************************
-// (c)2011 BlueBolt Ltd.  All rights reserved.
+// (c)2011-2012 BlueBolt Ltd.  All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -28,7 +28,7 @@
 // 
 // Author:Ashley Retallack - ashley-r@blue-bolt.com
 // 
-// File:alembicArchiveNode.cpp
+// File:bb_alembicArchiveShape.cpp
 // 
 // 
 //******************************************************************************
@@ -46,15 +46,25 @@
 #include <bb_MayaIds.h>
 
 #include "util.h"
-//#include "CreateSceneHelper.h"
-#include "alembicArchiveNode.h"
+#include "bb_alembicArchiveShape.h"
 
 #include <maya/MPlug.h>
-#include <maya/MPlugArray.h>
+#include <maya/MPlugArray.h> // (?)
 #include <maya/MDataBlock.h>
 #include <maya/MDataHandle.h>
 #include <maya/MGlobal.h>
 #include <maya/MTime.h>
+#include <maya/MRenderUtil.h>
+
+
+#include <maya/MBoundingBox.h>
+#include <maya/MDrawRequest.h>
+#include <maya/MDrawData.h>
+#include <maya/MSelectionMask.h>
+#include <maya/MSelectionList.h>
+
+#include <maya/MHardwareRenderer.h>
+#include <maya/MGLFunctionTable.h>
 
 #include <sys/time.h>
 #include <stdio.h>
@@ -67,56 +77,67 @@
 
 #include "boost/foreach.hpp"
 
+
+// Object and component color defines
+//
+#define LEAD_COLOR              18      // green
+#define ACTIVE_COLOR            15      // white
+#define ACTIVE_AFFECTED_COLOR   8       // purple
+#define DORMANT_COLOR           4       // blue
+#define HILITE_COLOR            17      // pale blue
+#define DORMANT_VERTEX_COLOR    8       // purple
+#define ACTIVE_VERTEX_COLOR     16      // yellow
+
 // The id is a 32bit value used to identify this type of node in the binary file format.
-MTypeId    alembicArchiveNode::id( k_alembicArchiveNode );
+MTypeId    bb_alembicArchiveShape::id( k_bb_alembicArchiveShape );
+MString    bb_alembicArchiveShape::name("bb_alembicArchiveShape");
 
-MObject    alembicArchiveNode::aAbcFile;
-MObject    alembicArchiveNode::aObjectPath;
+MObject    bb_alembicArchiveShape::aAbcFile;
+MObject    bb_alembicArchiveShape::aObjectPath;
 
-MObject    alembicArchiveNode::aShowProxy;
-MObject    alembicArchiveNode::aProxyPath;
+MObject    bb_alembicArchiveShape::aShowProxy;
+MObject    bb_alembicArchiveShape::aProxyPath;
 
-MObject    alembicArchiveNode::aTime;
-MObject    alembicArchiveNode::aTimeOffset;
-MObject    alembicArchiveNode::aShutterOpen;
-MObject    alembicArchiveNode::aShutterClose;
-MObject    alembicArchiveNode::aOutFps;
-MObject    alembicArchiveNode::aOutFrame;
-MObject    alembicArchiveNode::aBBMin;
-MObject    alembicArchiveNode::aBBMax;
-MObject    alembicArchiveNode::aBBSize;
-MObject    alembicArchiveNode::aBB;
+MObject    bb_alembicArchiveShape::aTime;
+MObject    bb_alembicArchiveShape::aTimeOffset;
+MObject    bb_alembicArchiveShape::aShutterOpen;
+MObject    bb_alembicArchiveShape::aShutterClose;
+MObject    bb_alembicArchiveShape::aOutFps;
+MObject    bb_alembicArchiveShape::aOutFrame;
+MObject    bb_alembicArchiveShape::aBBMin;
+MObject    bb_alembicArchiveShape::aBBMax;
+MObject    bb_alembicArchiveShape::aBBSize;
+MObject    bb_alembicArchiveShape::aBB;
 
-MObject    alembicArchiveNode::aOutUVs;
-MObject    alembicArchiveNode::aObjects;
+MObject    bb_alembicArchiveShape::aOutUVs;
+MObject    bb_alembicArchiveShape::aOutUDIMs;
+MObject    bb_alembicArchiveShape::aObjects;
 
-MObject    alembicArchiveNode::aFurBBPad;
-MObject    alembicArchiveNode::aFurBBMin;
-MObject    alembicArchiveNode::aFurBBMax;
-MObject    alembicArchiveNode::aFurBBSize;
-MObject    alembicArchiveNode::aFurBB;
+MObject    bb_alembicArchiveShape::aFurBBPad;
+MObject    bb_alembicArchiveShape::aFurBBMin;
+MObject    bb_alembicArchiveShape::aFurBBMax;
+MObject    bb_alembicArchiveShape::aFurBBSize;
+MObject    bb_alembicArchiveShape::aFurBB;
 
-MObject    alembicArchiveNode::aBBCenter;
-MObject    alembicArchiveNode::aFurLOD;
+MObject    bb_alembicArchiveShape::aBBCenter;
+MObject    bb_alembicArchiveShape::aFurLOD;
 
-MObject    alembicArchiveNode::aShowBB;
-MObject    alembicArchiveNode::aShowGL;
+MObject    bb_alembicArchiveShape::aShowBB;
+MObject    bb_alembicArchiveShape::aShowGL;
 
-MObject    alembicArchiveNode::aFlipV;
-MObject    alembicArchiveNode::aPolyAsSubD;
+MObject    bb_alembicArchiveShape::aFlipV;
+MObject    bb_alembicArchiveShape::aPolyAsSubD;
 
-MObject    alembicArchiveNode::aSubDIterations;
-MObject    alembicArchiveNode::aSubDUVSmoothing;
+MObject    bb_alembicArchiveShape::aSubDIterations;
+MObject    bb_alembicArchiveShape::aSubDUVSmoothing;
+MObject    bb_alembicArchiveShape::aMakeInstance;
 
-MObject    alembicArchiveNode::aExportFaceIds;
+MObject    bb_alembicArchiveShape::aExportFaceIds;
 
+SimpleAbcViewer::SceneState bb_alembicArchiveShape::abcSceneState;
+SimpleAbcViewer::SceneManager bb_alembicArchiveShape::abcSceneManager;
 
-
-
-SimpleAbcViewer::SceneState alembicArchiveNode::abcSceneState;
-SimpleAbcViewer::SceneManager alembicArchiveNode::abcSceneManager;
-
-GlShaderHolder alembicArchiveNode::glshader;
+GlShaderHolder bb_alembicArchiveShape::glshader;
 
 char vshader[] = { 
 #include "glsl/abc.vert.xxd"
@@ -127,24 +148,24 @@ char fshader[] = {
 
 void updateAbc(const void* data)
 {
-	MStatus st;
+    MStatus st;
 
-    alembicArchiveNode::alembicArchiveNode *node = (alembicArchiveNode::alembicArchiveNode *)data;
+    bb_alembicArchiveShape::bb_alembicArchiveShape *node = (bb_alembicArchiveShape::bb_alembicArchiveShape *)data;
 
     MFnDagNode fn( node->thisMObject() );
     MString fileName;
-    MPlug fplug  = fn.findPlug( alembicArchiveNode::aAbcFile );
+    MPlug fplug  = fn.findPlug( bb_alembicArchiveShape::aAbcFile );
     fplug.getValue(fileName);
     
     // expand env variables
     fileName = fileName.expandFilePath();
     
     MString objectPath;
-    MPlug opplug  = fn.findPlug( alembicArchiveNode::aObjectPath );
+    MPlug opplug  = fn.findPlug( bb_alembicArchiveShape::aObjectPath );
     opplug.getValue(objectPath);
     //catch if the file exists
 
-	//struct stat buffer ;
+    //struct stat buffer ;
 
 
     // no caching!
@@ -154,7 +175,7 @@ void updateAbc(const void* data)
 
     if (!archive.valid())
     {
-        MString theError = "Cannot read file " + fileName;
+        MString theError = "Cannot read file :: " + fileName;
         printError(theError);
 
     } else {
@@ -164,17 +185,16 @@ void updateAbc(const void* data)
 		std::string key = mkey.asChar();//node->getSceneKey();
 
 		if (node->m_currscenekey != key) {
-			alembicArchiveNode::abcSceneManager.removeScene(node->m_currscenekey);
+			bb_alembicArchiveShape::abcSceneManager.removeScene(node->m_currscenekey);
 			node->m_currscenekey = "";
 		}
 
-		alembicArchiveNode::abcSceneManager.addScene(fileName.asChar(),objectPath.asChar());
-		node->m_scene=alembicArchiveNode::abcSceneManager.getScene(key);
+		bb_alembicArchiveShape::abcSceneManager.addScene(fileName.asChar(),objectPath.asChar());
+		node->m_scene=bb_alembicArchiveShape::abcSceneManager.getScene(key);
 		node->m_currscenekey = key;
 		node->m_abcdirty = false;
-
-
 		node->m_uvs = node->getUVShells();
+                node->m_udims = node->getUDIMs();
     //}
     }
     //node->m_objects = node->getObjects();
@@ -185,59 +205,20 @@ void updateAbc(const void* data)
 
 void abcDirtiedCallback( MObject & nodeMO , MPlug & plug, void* data)
 {
-    alembicArchiveNode::alembicArchiveNode *node = (alembicArchiveNode::alembicArchiveNode *)data;
-    if (plug.attribute()==alembicArchiveNode::aAbcFile || plug.attribute()==alembicArchiveNode::aObjectPath) {
+    bb_alembicArchiveShape::bb_alembicArchiveShape *node = (bb_alembicArchiveShape::bb_alembicArchiveShape *)data;
+    if (plug.attribute()==bb_alembicArchiveShape::aAbcFile || plug.attribute()==bb_alembicArchiveShape::aObjectPath) {
         MFnDagNode fn( node->thisMObject() );
         node->m_abcdirty = true;
     }
 }
 
 void abcChangedCallback( MNodeMessage::AttributeMessage msg, MPlug & plug, MPlug & otherPlug, void* data)
-{/*
-    animaAlembicHolder::animaAlembicHolder *node = (animaAlembicHolder::animaAlembicHolder *)data;
-//    std::cout << "attrChanged: " << node->name() << " - " << plug.name() << "(other: " << otherPlug.name() << " )" << std::endl;
-    if ( ((msg & MNodeMessage::kAttributeSet) || (msg & MNodeMessage::kOtherPlugSet)) && (plug.attribute()==animaAlembicHolder::aAbcFile || plug.attribute()==animaAlembicHolder::aObjectPath)) {//plug.partialName()=="af") {
-//        MString file;
-//        plug.getValue(file);
-
-        MFnDagNode fn( node->thisMObject() );
-        MString file;
-        MPlug fplug  = fn.findPlug( animaAlembicHolder::aAbcFile, true );
-        fplug.getValue(file);
-        // expand env variables
-        file = file.expandFilePath();
-
-//        std::cout << "assetChanged! " << file << std::endl;
-
-//        MFnDagNode fn( node->thisMObject() );
-        MString objectPath;
-        MPlug opplug  = fn.findPlug( animaAlembicHolder::aObjectPath, true );
-        opplug.getValue(objectPath);
-
-//        MPlug opplug  = fn.findPlug( animaAlembicHolder::aObjectPath, true );
-//        opplug.getValue(objectPath);
-
-        MString mkey = file+"/"+objectPath;
-        std::string key = mkey.asChar();//node->getSceneKey();
-
-        if (node->m_currscenekey != key) {
-            animaAlembicHolder::abcSceneManager.removeScene(node->m_currscenekey);
-            node->m_currscenekey = "";
-        }
-
-//        if (file != "") {
-            // TODO: check file existance!!
-            animaAlembicHolder::abcSceneManager.addScene(file.asChar(),objectPath.asChar());
-
-            node->m_currscenekey = key;
-//        }
-    }
-*/
+{
 }
 
 void nodePreRemovalCallback( MObject& obj, void* data)
 {
-    alembicArchiveNode::alembicArchiveNode *node = (alembicArchiveNode::alembicArchiveNode *)data;
+    bb_alembicArchiveShape::bb_alembicArchiveShape *node = (bb_alembicArchiveShape::bb_alembicArchiveShape *)data;
 
     MFnDagNode fn( node->thisMObject() );
 
@@ -246,21 +227,43 @@ void nodePreRemovalCallback( MObject& obj, void* data)
 	MPlug plug  = fn.findPlug( node->aObjectPath );
 	plug.getValue( objectPath );
 
-    alembicArchiveNode::abcSceneManager.removeScene(node->getSceneKey(false));
+    bb_alembicArchiveShape::abcSceneManager.removeScene(node->getSceneKey(false));
 }
 
-alembicArchiveNode::alembicArchiveNode() {
+
+AlembicArchiveGeom::AlembicArchiveGeom()
+{
+   dso  = "";
+   data = "";
+   mode = 0;
+   geomLoaded = "";
+   scenekey = "";
+   scale = 1.0f;
+   BBmin = MPoint(-1.0f, -1.0f, -1.0f);
+   BBmax = MPoint(1.0f, 1.0f, 1.0f);
+   bbox = MBoundingBox(BBmin, BBmax);
+   IsGeomLoaded = false;
+   updateView = true;
+   updateBBox = true;
+   useSubFrame = false;
+   useFrameExtension = false;
+   dList = 0;
+}
+
+
+bb_alembicArchiveShape::bb_alembicArchiveShape() {
     m_bbmode = 0;
     m_currscenekey = "";
     m_abcdirty = false;
     m_objects = MStringArray();
     m_uvs = MIntArray();
+    m_showbb = false;
 }
 
-alembicArchiveNode::~alembicArchiveNode() {
+bb_alembicArchiveShape::~bb_alembicArchiveShape() {
 }
 
-double alembicArchiveNode::setHolderTime(bool atClose = false) const
+double bb_alembicArchiveShape::setHolderTime(bool atClose = false) const
 {
     // update scene if needed
     if (m_abcdirty) updateAbc(this);
@@ -294,157 +297,15 @@ double alembicArchiveNode::setHolderTime(bool atClose = false) const
     return dtime;
 }
 
-void alembicArchiveNode::draw( M3dView& view,
-		const MDagPath& DGpath,
-		M3dView::DisplayStyle style,
-		M3dView::DisplayStatus status )
-{
-	MStatus st;
 
-	MObject thisNode = thisMObject();
-
-	MBoundingBox bb = boundingBox();
-	MVector bmin,bmax;
-	bmin=bb.min();
-	bmax=bb.max();
-
-    // update scene if needed
-    //if (m_abcdirty) updateAbc(this);
-
-//    std::cout << "draw" << std::endl;
-//    timer::timer TIMER;
-//    TIMER.start();
-
-    MColor col;
-
-    if (status == 8) {
-        col = MColor(0.8,1.0,0.8);
-    } else if (status == 0) {
-        col = MColor(0.25,1.0,0.5);
-    } else {
-    	col = MColor(0.7,0.5,0.5);
-    }
-
-    /*
-    switch (status)  // From M3dView::DisplayStatus status  in the draw() command
-    {
-		case M3dView::kLead:
-			col= MColor(0.26, 1.0, 0.64)  ;		// maya green
-			bColOverride = true;
-			break ;
-
-		case M3dView::kActive:
-			col = MColor(1.0, 1.0, 1.0)  ;		// maya white
-			bColOverride = true;
-			break ;
-
-		case M3dView::kActiveAffected:
-			col = MColor(0.78, 1.0, 0.78)  ;	// maya magenta
-			bColOverride = true;
-			break ;
-
-		case M3dView::kTemplate:
-			col = MColor(0.47, 0.47, 0.47)  ;	// maya template gray
-			bColOverride = true;
-			break ;
-
-		case M3dView::kActiveTemplate:
-			col = MColor(1.0, 0.47, 0.47)  ;	// maya selected template pink
-			bColOverride = true;
-			break ;
-
-		default:
-			//col = MColor(0.7,0.5,0.5);
-			col = MColor(0.1, 0.2, 0.7) ;	// else set color as desired
-    }
-	*/
-
-    view.beginGL();
-
-    // this makes a copy of the current openGL settings so that anything
-    // we change will not affect anything else maya draws afterwards.
-    glPushAttrib( GL_ALL_ATTRIB_BITS );
-
-    setHolderTime();
-
-    // init gl shaders - DISABLED FOR NOW - not even sure if we can do this here
-    // glshader.init((char *)vshader, (char *)fshader);
-
-    if (style == M3dView::kWireFrame){
-
-    	glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
-
-    } else {
-    	glShadeModel( GL_SMOOTH );
-    	glEnable(GL_LIGHTING);
-    	glEnable(GL_COLOR_MATERIAL);
-    	glEnable (GL_BLEND);
-    	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    }
-    // glUseProgram(glshader.getProgram());
-
-    glColor3f(col.r,col.g,col.b);
-
-    MFnDagNode fn( thisNode );
-
-    MPlug glPlug(thisNode, aShowGL );
-    bool doGL = glPlug.asBool() ;
-
-    // draw the "scene" from the alembic file
-
-    bool proxy = false;
-
-    MPlug plug =  fn.findPlug( aShowProxy );
-    plug.getValue( proxy );
-
-    std::string sceneKey = getSceneKey(proxy);
-    if (abcSceneManager.hasKey(sceneKey) && doGL){
-    	abcSceneManager.getScene(sceneKey)->draw(abcSceneState);
-    }
-    else if (abcSceneManager.hasKey(sceneKey) && !doGL){
-    	drawABox(bmin, bmax,true);
-    }
-
-
-
-    glFlush();
-
-    // restore the old openGL settings
-    glPopAttrib();
-    // think glPopMatrix()
-
-    //add the boundingbox
-
-
-    MPlug bbPlug(thisNode, aShowBB );
-    bool doBB = bbPlug.asBool() ;
-
-    if (doBB){
-
-
-    	//MPlug geoBBPlug( thisNode, aBB );
-    	//MVector bmin,bmax;
-    	//bmin=bb.min();
-    	//bmax=bb.max();
-
-    	//st = bbValue(geoBBPlug, bmin,bmax);
-    	drawABox(bmin, bmax,false);
-
-    }
-
-    view.endGL();
-//    TIMER.stop();
-//    TIMER.print();
-}
-
-bool alembicArchiveNode::isBounded() const
+bool bb_alembicArchiveShape::isBounded() const
 {
     return true;
 }
 
 //TODO: Make switch so if we need the shutter bounds or not (for the procedrual)
 
-MBoundingBox alembicArchiveNode::boundingBox() const
+MBoundingBox bb_alembicArchiveShape::boundingBox() const
 {
     // update scene if needed
     if (m_abcdirty) updateAbc(this);
@@ -468,14 +329,8 @@ MBoundingBox alembicArchiveNode::boundingBox() const
     return bbox;
 }
 
-// don't treat locator as a normal maya locator
-// locator won't be hidden if locators are set to not visible
-bool alembicArchiveNode::excludeAsLocator() const
-{
-    return false;
-}
 
-MStatus alembicArchiveNode::compute( const MPlug& plug, MDataBlock& data )
+MStatus bb_alembicArchiveShape::compute( const MPlug& plug, MDataBlock& data )
 {
     MStatus returnStatus;
 
@@ -486,7 +341,7 @@ MStatus alembicArchiveNode::compute( const MPlug& plug, MDataBlock& data )
     if (MS::kSuccess != returnStatus) return returnStatus;
     float furBbPad = floatData.asFloat();  
 
-    if (plug == aAbcFile || plug == aObjectPath ){
+    if (plug == aAbcFile || plug == aObjectPath || plug == aSubDUVSmoothing ){
 
     	cout << "just did something!! :D" << endl;
 
@@ -568,6 +423,34 @@ MStatus alembicArchiveNode::compute( const MPlug& plug, MDataBlock& data )
 
     }
 
+    if(plug == aOutUDIMs)
+    {
+
+        data.setClean(plug);
+
+        // ----- get uvshells and change the attribute to fit
+
+        MIntArray tmpUDIMArray = m_udims;
+
+        unsigned int nEle = tmpUDIMArray.length();
+
+        MArrayDataHandle outputArray = data.outputArrayValue(aOutUDIMs,
+                                                             &returnStatus);
+        MArrayDataBuilder builder(aOutUDIMs, nEle, &returnStatus);
+
+        for (unsigned int idx=0; idx < nEle; ++idx)
+            {
+
+                MDataHandle outHandle = builder.addElement(idx);
+                outHandle.set(tmpUDIMArray[idx]);
+
+            }
+
+        returnStatus = outputArray.set(builder);
+
+        returnStatus = outputArray.setAllClean();
+
+    }
     if(plug == aObjects)
     {
 
@@ -627,7 +510,7 @@ MStatus alembicArchiveNode::compute( const MPlug& plug, MDataBlock& data )
 }
 
 
-void alembicArchiveNode::walk(Alembic::Abc::IObject iObj)
+void bb_alembicArchiveShape::walk(Alembic::Abc::IObject iObj)
 {
 	// Walk through the given object and return all of its children
 
@@ -653,7 +536,7 @@ void alembicArchiveNode::walk(Alembic::Abc::IObject iObj)
 
 }
 
-MStringArray alembicArchiveNode::getObjects()
+MStringArray bb_alembicArchiveShape::getObjects()
 {
 
 	MStringArray objects;
@@ -710,7 +593,7 @@ MStringArray alembicArchiveNode::getObjects()
 }
 
 
-MIntArray alembicArchiveNode::getUVShells()
+MIntArray bb_alembicArchiveShape::getUVShells()
 {
 	MIntArray uvShells;
     MStatus st = MS::kSuccess;
@@ -893,20 +776,30 @@ MIntArray alembicArchiveNode::getUVShells()
 
 	}
 
-	//cout << "alembicArchiveNode::getUVShells  uvShells > "<<  uvShells << endl;
+	//cout << "bb_alembicArchiveShape::getUVShells  uvShells > "<<  uvShells << endl;
 
 	return uvShells;
 
 
 }  // setUVs
 
-void* alembicArchiveNode::creator()
+
+MIntArray bb_alembicArchiveShape::getUDIMs()
 {
-//    std::cout << "creator" << std::endl;
-    return new alembicArchiveNode();
+    MIntArray UDIMs;
+    MStatus st = MS::kSuccess;
+
+
+    return UDIMs;
 }
 
-void alembicArchiveNode::postConstructor()
+void* bb_alembicArchiveShape::creator()
+{
+//    std::cout << "creator" << std::endl;
+    return new bb_alembicArchiveShape();
+}
+
+void bb_alembicArchiveShape::postConstructor()
 {
 //    std::cout << "postconstruct" << std::endl;
     
@@ -918,16 +811,18 @@ void alembicArchiveNode::postConstructor()
 
     // call callback once on construct
     MFnDagNode fn( node );
-    MPlug fplug  = fn.findPlug( alembicArchiveNode::aAbcFile, true );
+    MPlug fplug  = fn.findPlug( bb_alembicArchiveShape::aAbcFile, true );
     abcDirtiedCallback( node, fplug, this );
+
+    setRenderable(true);
 
 }
 
-void alembicArchiveNode::copyInternalData( MPxNode* srcNode )
+void bb_alembicArchiveShape::copyInternalData( MPxNode* srcNode )
 {
     // here we ensure that the scene manager stays up to date when duplicating nodes
     
-    alembicArchiveNode::alembicArchiveNode *node = (alembicArchiveNode::alembicArchiveNode *)srcNode;
+    bb_alembicArchiveShape::bb_alembicArchiveShape *node = (bb_alembicArchiveShape::bb_alembicArchiveShape *)srcNode;
 
     MFnDagNode fn( node->thisMObject() );
     MString abcfile;
@@ -942,12 +837,14 @@ void alembicArchiveNode::copyInternalData( MPxNode* srcNode )
     abcSceneManager.addScene(abcfile.asChar(),objectPath.asChar());
     m_currscenekey = getSceneKey(false);
 
+
+
 //    std::cout << "copyInternalData: " << abcfile << " " << objectPath << std::endl;
 
 }
 
 
-MStatus alembicArchiveNode::initialize()        
+MStatus bb_alembicArchiveShape::initialize()
 {
 //    std::cout << "init" << std::endl;
 
@@ -957,31 +854,33 @@ MStatus alembicArchiveNode::initialize()
     MFnNumericAttribute nAttr;
     MFnMessageAttribute mAttr;
     MFnUnitAttribute uAttr;
-	MFnCompoundAttribute cAttr;
+    MFnCompoundAttribute cAttr;
+    MFnEnumAttribute eAttr;
     MStatus             st;
 
     MFnStringData fileFnStringData;
     MObject fileNameDefaultObject = fileFnStringData.create("");
 
-    aAbcFile = tAttr.create("abcFile", "af",
-        MFnData::kString, fileNameDefaultObject);
+    aAbcFile = tAttr.create("abcFile", "af", MFnData::kString, fileNameDefaultObject);
     tAttr.setUsedAsFilename(true);
     tAttr.setHidden(false);
     tAttr.setStorable(true);
     tAttr.setKeyable(true);
+    st = addAttribute( aAbcFile );er;
 
-    aObjectPath = tAttr.create( "objectPath", "op", MFnStringData::kString );
+    aObjectPath = tAttr.create( "objectPath", "opth", MFnStringData::kString );
     tAttr.setWritable(true);
     tAttr.setReadable(true);
     tAttr.setHidden(false);
     tAttr.setStorable(true);
     tAttr.setKeyable(true);
+    st = addAttribute( aObjectPath );er;
 
     aShowProxy = nAttr.create( "showProxy", "sp", MFnNumericData::kBoolean );
     nAttr.setReadable(true);
     nAttr.setKeyable(true);
     nAttr.setDefault(false);
-	st = addAttribute(aShowProxy);
+    st = addAttribute(aShowProxy);
 
     aProxyPath = tAttr.create( "proxyPath", "pp", MFnStringData::kString);
     tAttr.setWritable(true);
@@ -989,7 +888,7 @@ MStatus alembicArchiveNode::initialize()
     tAttr.setHidden(false);
     tAttr.setStorable(true);
     tAttr.setKeyable(true);
-	st = addAttribute(aProxyPath);
+    st = addAttribute(aProxyPath);
 
     aTime = uAttr.create( "time", "t", MFnUnitAttribute::kTime );
     uAttr.setStorable(false);
@@ -1023,10 +922,20 @@ MStatus alembicArchiveNode::initialize()
     nAttr.setStorable(false);
     nAttr.setReadable(true);
     nAttr.setWritable(true);
-	nAttr.setArray(true);		// Set this to be an array!
-	nAttr.setUsesArrayDataBuilder(true);		// Set this to be true also!
+    nAttr.setArray(true);		// Set this to be an array!
+    nAttr.setUsesArrayDataBuilder(true);		// Set this to be true also!
     nAttr.setHidden(true);
-	st = addAttribute(aOutUVs);er;
+    st = addAttribute(aOutUVs);er;
+
+    //array of uvshells that this archive/path contains (starting with 1)
+    aOutUDIMs = nAttr.create( "outUDIMs", "udim", MFnNumericData::kInt,0,&st);
+    nAttr.setStorable(false);
+    nAttr.setReadable(true);
+    nAttr.setWritable(true);
+    nAttr.setArray(true);               // Set this to be an array!
+    nAttr.setUsesArrayDataBuilder(true);                // Set this to be true also!
+    nAttr.setHidden(true);
+    st = addAttribute(aOutUDIMs);er;
 
     //array of objects that this archive/path contains
     aObjects = tAttr.create( "objects", "objs",  MFnStringData::kString,&st);
@@ -1036,7 +945,7 @@ MStatus alembicArchiveNode::initialize()
     tAttr.setArray(true);
     tAttr.setUsesArrayDataBuilder(true);
     tAttr.setHidden(true);
-	st = addAttribute(aObjects);er;
+    st = addAttribute(aObjects);er;
 
     aBBMin = nAttr.create( "geoBBMin", "gbbmin", MFnNumericData::k3Double);
     nAttr.setStorable(false);
@@ -1054,20 +963,18 @@ MStatus alembicArchiveNode::initialize()
     nAttr.setReadable(true);
     nAttr.setHidden(true);
 
-
-	aBB = cAttr.create("geoBoundingBox", "gbb");
-	cAttr.addChild(aBBMin);
-	cAttr.addChild(aBBMax);
-	cAttr.addChild(aBBSize);
-	cAttr.setStorable(true);
-	cAttr.setHidden(false);
-	st = addAttribute(aBB);
-
+    aBB = cAttr.create("geoBoundingBox", "gbb");
+    cAttr.addChild(aBBMin);
+    cAttr.addChild(aBBMax);
+    cAttr.addChild(aBBSize);
+    cAttr.setStorable(true);
+    cAttr.setHidden(false);
+    st = addAttribute(aBB);er;
 
     aFurBBPad = nAttr.create( "furBbPad", "fbbpad", MFnNumericData::kFloat);
     nAttr.setStorable(true);
     nAttr.setKeyable(true);
-	st = addAttribute(aFurBBPad);
+    st = addAttribute(aFurBBPad);er;
 
     aFurBBMin = nAttr.create( "furBbMin", "fbbmin", MFnNumericData::k3Double);
     nAttr.setStorable(false);
@@ -1084,20 +991,20 @@ MStatus alembicArchiveNode::initialize()
     nAttr.setWritable(true);
     nAttr.setReadable(true);
     nAttr.setHidden(true);
-	aFurBB = cAttr.create("furBoundingBox", "fbb");
-	cAttr.addChild(aFurBBMin);
-	cAttr.addChild(aFurBBMax);
-	cAttr.addChild(aFurBBSize);
-	cAttr.setStorable(true);
-	cAttr.setHidden(false);
-	st = addAttribute(aFurBB);
+    aFurBB = cAttr.create("furBoundingBox", "fbb");
+    cAttr.addChild(aFurBBMin);
+    cAttr.addChild(aFurBBMax);
+    cAttr.addChild(aFurBBSize);
+    cAttr.setStorable(true);
+    cAttr.setHidden(false);
+    st = addAttribute(aFurBB);er;
 
     aBBCenter = nAttr.create( "bbCenter", "bbc", MFnNumericData::k3Double);
     nAttr.setStorable(false);
     nAttr.setWritable(true);
     nAttr.setReadable(true);
     nAttr.setHidden(true);
-	st = addAttribute(aBBCenter);
+    st = addAttribute(aBBCenter);er;
 
 
     aFurLOD = nAttr.create( "furLOD", "flod", MFnNumericData::kFloat, 1.0);
@@ -1107,63 +1014,63 @@ MStatus alembicArchiveNode::initialize()
 
     aShowBB = nAttr.create( "showBoundingBox", "sbb", MFnNumericData::kBoolean, 0, &st);
     nAttr.setHidden(false);
-	nAttr.setKeyable( true );
-	st = addAttribute(aShowBB);
+    nAttr.setKeyable( true );
+    st = addAttribute(aShowBB);er;
 
-	aShowGL = nAttr.create( "showGL", "sgl", MFnNumericData::kBoolean, 1, &st);
+    aShowGL = nAttr.create( "showGL", "sgl", MFnNumericData::kBoolean, 1, &st);
     nAttr.setHidden(false);
-	nAttr.setKeyable( true );
-	st = addAttribute(aShowGL);
+    nAttr.setKeyable( true );
+    st = addAttribute(aShowGL);er;
 
     aFlipV = nAttr.create( "flipV", "fv", MFnNumericData::kBoolean, 0, &st);
     nAttr.setHidden(false);
-	nAttr.setKeyable( true );
-	st = addAttribute(aFlipV);
+    nAttr.setKeyable( true );
+    st = addAttribute(aFlipV);er;
 
     aPolyAsSubD = nAttr.create( "polyAsSubD", "psd", MFnNumericData::kBoolean, 1, &st);
     nAttr.setHidden(false);
-	nAttr.setKeyable( true );
-	st = addAttribute(aPolyAsSubD);er;
+    nAttr.setKeyable( true );
+    st = addAttribute(aPolyAsSubD);er;
 
-/*    aMessageAttr = mAttr.create( "messageAttr", "me" );
-    mAttr.setWritable(true);
-    mAttr.setReadable(true);
-    mAttr.setHidden(false);
-    mAttr.setStorable(true);
+    // Arnold attributes
 
-    aOutStringAttr = tAttr.create( "outStringAttr", "os", MFnStringData::kString );
-    tAttr.setWritable(true);
-    tAttr.setReadable(true);
-    tAttr.setHidden(false);
-    tAttr.setStorable(true);
-*/
+    aSubDIterations = nAttr.create( "ai_subDIterations", "si", MFnNumericData::kInt, 1 );
+    nAttr.setStorable(true);
+    nAttr.setKeyable(true);
+    st = addAttribute(aSubDIterations);er;
+
+    aSubDUVSmoothing = eAttr.create( "ai_subDUVSmoothing", "suv", 0 );  // can set default 0, 1, 2, etc..
+    eAttr.setStorable(true);
+    eAttr.setKeyable(true);
+    eAttr.addField("pin_corners", 0) ;
+    eAttr.addField("pin_borders", 1) ;
+    eAttr.addField("linear", 2) ;
+    eAttr.addField("smooth", 3) ;
+    eAttr.setDefault(0) ;
+    st = addAttribute(aSubDUVSmoothing);er;
+
+    aMakeInstance = nAttr.create( "makeInstance", "minst", MFnNumericData::kBoolean, 0, &st);
+    nAttr.setHidden(false);
+    nAttr.setKeyable( true );
+    st = addAttribute(aMakeInstance);er;
+
+    aExportFaceIds = nAttr.create( "exportFaceIds", "efid", MFnNumericData::kBoolean, 1, &st);
+    nAttr.setHidden(false);
+    nAttr.setKeyable( true );
+    st = addAttribute(aExportFaceIds);er;
 
     // Add the attributes we have created to the node
     //
-    addAttribute( aAbcFile );
-    addAttribute( aObjectPath );
-//    addAttribute( aBooleanAttr );
-    addAttribute( aTime );
-    addAttribute( aTimeOffset );
-    addAttribute( aShutterOpen );
-    addAttribute( aShutterClose );
-    addAttribute( aOutFps );
-    addAttribute( aOutFrame );
-//    addAttribute( aBBMin );
-//    addAttribute( aBBMax );
-//    addAttribute( aBBSize );
-
-    addAttribute( aFurBBPad );
-//    addAttribute( aFurBBMin );
-//    addAttribute( aFurBBMax );
-//    addAttribute( aFurBBSize );
-
-    addAttribute( aBBCenter );
-
-    addAttribute( aFurLOD );
-
-    addAttribute( aShowBB );
-
+    addAttribute( aTime );er;
+    addAttribute( aTimeOffset );er;
+    addAttribute( aShutterOpen );er;
+    addAttribute( aShutterClose );er;
+    addAttribute( aOutFps );er;
+    addAttribute( aOutFrame );er;
+    addAttribute( aFurBBPad );er;
+    addAttribute( aBBCenter );er;
+    addAttribute( aFurLOD );er;
+    addAttribute( aShowBB );er;
 
     attributeAffects( aAbcFile, aBBMin );
     attributeAffects( aAbcFile, aBBMax );
@@ -1234,124 +1141,15 @@ MStatus alembicArchiveNode::initialize()
 
 }
 
-//
-// simple bounding box creator
-void alembicArchiveNode::drawABox(const MVector &bmin, const MVector &bmax,bool poly=false) {
-
-
-
-	if (poly){
-/*
-		GLfloat vertices[] = {float(bmax.x),float(bmax.y),float(bmax.z), float(bmin.x),float(bmax.y),float(bmax.z), float(bmin.x),float(bmin.y),float(bmax.z),float(bmin.x),float(bmax.y),float(bmin.z),
-			float(bmax.x), float(bmax.y), float(bmin.z), float(bmin.x), float(bmax.y), float(bmin.z), float(bmin.x), float(bmin.y), float(bmin.z), float(bmax.x), float(bmin.y), float(bmin.z),
-			float(bmax.x), float(bmax.y), float(bmax.z), float(bmax.x), float(bmin.y), float(bmax.z), float(bmax.x), float(bmin.y), float(bmin.z), float(bmax.x), float(bmax.y), float(bmin.z),
-			float(bmin.x), float(bmin.y), float(bmax.z), float(bmin.x), float(bmin.y), float(bmin.z), float(bmax.x), float(bmin.y), float(bmin.z), float(bmax.x), float(bmin.y), float(bmax.z),
-			float(bmin.x), float(bmax.y), float(bmax.z), float(bmax.x), float(bmax.y), float(bmax.z), float(bmax.x), float(bmax.y), float(bmin.z), float(bmin.x), float(bmax.y), float(bmin.z),
-			float(bmin.x), float(bmax.y), float(bmin.z), float(bmin.x), float(bmin.y), float(bmin.z), float(bmin.x), float(bmin.y), float(bmax.z), float(bmin.x), float(bmax.y), float(bmax.z)};
-
-		GLfloat colors[] = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
-								   1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0,
-								   1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0,
-								   0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0,
-								   1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0,
-								   0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0};
-
-		GLfloat normals[] = {0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0,
-									0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0,
-									1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0,
-									0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0,
-									0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0,
-									-1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0};
-*/
-		glBegin(GL_QUADS);
-    	glShadeModel( GL_FLAT );
-
-	} else {
-		glBegin( GL_LINES );
-	}
-	//glEnable(GL_CULL_FACE);
-	//glCullFace(GL_BACK);
-
-
-		////////////////// BASE
-    	glNormal3f(0, -1, 0);
-		glVertex3f(float(bmax.x),float(bmin.y),float(bmin.z));
-		glVertex3f(float(bmax.x),float(bmin.y),float(bmax.z));
-		glVertex3f(float(bmin.x),float(bmin.y),float(bmax.z));
-		glVertex3f(float(bmin.x),float(bmin.y),float(bmin.z));
-
-
-		////////////////// TOP
-
-    	glNormal3f(0, 1, 0);
-		glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
-		glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
-		glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
-		glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
-
-		/////////////////// BACK -- correct
-
-    	glNormal3f(0, 0, 1);
-		glVertex3f(float(bmax.x),float(bmin.y),float(bmin.z));
-		glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
-		glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
-		glVertex3f(float(bmin.x),float(bmin.y),float(bmin.z));
-
-		/////////////////// FRONT -- correct
-
-    	glNormal3f(0, 0, 1);
-		glVertex3f(float(bmax.x),float(bmin.y),float(bmax.z));
-		glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
-		glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
-		glVertex3f(float(bmin.x),float(bmin.y),float(bmax.z));
-
-		/////////////////// LEFT
-
-    	glNormal3f(-1, 0, 0);
-		glVertex3f(float(bmin.x),float(bmin.y),float(bmax.z));
-		glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
-		glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
-		glVertex3f(float(bmin.x),float(bmin.y),float(bmin.z));
-
-		/////////////////// RIGHT
-
-    	glNormal3f(-1, 0, 0);
-		glVertex3f(float(bmax.x),float(bmin.y),float(bmax.z));
-		glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
-		glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
-		glVertex3f(float(bmax.x),float(bmin.y),float(bmin.z));
-
-	glEnd();
-
-	if (!poly){
-	// make the corners big points
-		glPushAttrib(GL_CURRENT_BIT);
-		glPointSize(5);
-		glBegin( GL_POINTS );
-		glVertex3f(float(bmin.x),float(bmin.y),float(bmin.z));
-		glVertex3f(float(bmin.x),float(bmin.y),float(bmax.z));
-		glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
-		glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
-		glVertex3f(float(bmax.x),float(bmin.y),float(bmin.z));
-		glVertex3f(float(bmax.x),float(bmin.y),float(bmax.z));
-		glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
-		glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
-		glEnd();
-	}
-	glPopAttrib();
-
-}
-
-MStatus alembicArchiveNode::doSomething()
+AlembicArchiveGeom* bb_alembicArchiveShape::geometry()
 {
-    MStatus st;
 
-    cout << "just did something!! :D" << endl;
+  return &fGeometry;
 
-    return MS::kSuccess;
 }
 
-std::string alembicArchiveNode::getSceneKey(bool proxy) const
+
+std::string bb_alembicArchiveShape::getSceneKey(bool proxy) const
 {
     MFnDagNode fn( thisMObject() );
     MString abcfile;
@@ -1372,7 +1170,7 @@ std::string alembicArchiveNode::getSceneKey(bool proxy) const
     return std::string((abcfile+"/"+objPath).asChar());
 }
 
-MStatus alembicArchiveNode::emitCache(float relativeFrame)  {
+MStatus bb_alembicArchiveShape::emitCache(float relativeFrame)  {
 
 	//if (!hasCache()) return MS::kUnknownParameter;
 
@@ -1496,3 +1294,445 @@ MStatus alembicArchiveNode::emitCache(float relativeFrame)  {
 }
 
 
+// UI
+
+
+bb_alembicArchiveShapeUI::bb_alembicArchiveShapeUI()
+{
+}
+bb_alembicArchiveShapeUI::~bb_alembicArchiveShapeUI()
+{
+}
+
+void* bb_alembicArchiveShapeUI::creator()
+{
+   return new bb_alembicArchiveShapeUI();
+}
+
+//
+// simple bounding box creator
+void bb_alembicArchiveShapeUI::drawABox(const MVector &bmin, const MVector &bmax,bool poly=false) const {
+
+
+  MStatus st;
+
+  // Initialize GL function table first time through
+  static MGLFunctionTable *gGLFT = NULL;
+  if (gGLFT == NULL)
+     gGLFT = MHardwareRenderer::theRenderer()->glFunctionTable();
+
+  if (poly){
+/*
+                GLfloat vertices[] = {float(bmax.x),float(bmax.y),float(bmax.z), float(bmin.x),float(bmax.y),float(bmax.z), float(bmin.x),float(bmin.y),float(bmax.z),float(bmin.x),float(bmax.y),float(bmin.z),
+                        float(bmax.x), float(bmax.y), float(bmin.z), float(bmin.x), float(bmax.y), float(bmin.z), float(bmin.x), float(bmin.y), float(bmin.z), float(bmax.x), float(bmin.y), float(bmin.z),
+                        float(bmax.x), float(bmax.y), float(bmax.z), float(bmax.x), float(bmin.y), float(bmax.z), float(bmax.x), float(bmin.y), float(bmin.z), float(bmax.x), float(bmax.y), float(bmin.z),
+                        float(bmin.x), float(bmin.y), float(bmax.z), float(bmin.x), float(bmin.y), float(bmin.z), float(bmax.x), float(bmin.y), float(bmin.z), float(bmax.x), float(bmin.y), float(bmax.z),
+                        float(bmin.x), float(bmax.y), float(bmax.z), float(bmax.x), float(bmax.y), float(bmax.z), float(bmax.x), float(bmax.y), float(bmin.z), float(bmin.x), float(bmax.y), float(bmin.z),
+                        float(bmin.x), float(bmax.y), float(bmin.z), float(bmin.x), float(bmin.y), float(bmin.z), float(bmin.x), float(bmin.y), float(bmax.z), float(bmin.x), float(bmax.y), float(bmax.z)};
+
+                GLfloat colors[] = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+                                                                   1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0,
+                                                                   1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0,
+                                                                   0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0,
+                                                                   1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0,
+                                                                   0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0};
+
+                GLfloat normals[] = {0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0,
+                                                                        0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0,
+                                                                        1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0,
+                                                                        0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0,
+                                                                        0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0,
+                                                                        -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0};
+*/
+      gGLFT->glBegin(GL_QUADS);
+      gGLFT->glShadeModel( GL_FLAT );
+
+    } else {
+        gGLFT->glBegin( MGL_LINE_STRIP );
+    }
+    //glEnable(GL_CULL_FACE);
+    //glCullFace(GL_BACK);
+
+  float topLeftFront[3] = { float(bmin.x),float(bmax.y),float(bmax.z) };
+  float topRightFront[3] = { float(bmax.x),float(bmax.y),float(bmax.z) };
+  float topLeftBack[3] = { float(bmin.x),float(bmax.y),float(bmin.z) };
+  float topRightBack[3] = { float(bmax.x),float(bmax.y),float(bmin.z) };
+
+  float bottomLeftFront[3] = { float(bmin.x),float(bmin.y),float(bmax.z) };
+  float bottomRightFront[3] = { float(bmax.x),float(bmin.y),float(bmax.z) };
+  float bottomLeftBack[3] = { float(bmin.x),float(bmin.y),float(bmin.z) };
+  float bottomRightBack[3] = { float(bmax.x),float(bmin.y),float(bmin.z) };
+
+                ////////////////// BASE
+/*
+  gGLFT->glVertex3f(float(bmax.x),float(bmin.y),float(bmin.z));
+  gGLFT->glVertex3f(float(bmax.x),float(bmin.y),float(bmax.z));
+  gGLFT->glVertex3f(float(bmin.x),float(bmin.y),float(bmax.z));
+  gGLFT->glVertex3f(float(bmin.x),float(bmin.y),float(bmin.z));
+*/
+  gGLFT->glNormal3f(0, -1, 0);
+  gGLFT->glVertex3fv(bottomLeftFront);
+  gGLFT->glVertex3fv(bottomLeftBack);
+  gGLFT->glVertex3fv(bottomRightBack);
+  gGLFT->glVertex3fv(bottomRightFront);
+
+                /////////////////// FRONT -- correct
+
+  gGLFT->glNormal3f(0, 0, 1);
+  gGLFT->glVertex3fv(bottomLeftFront);
+  gGLFT->glVertex3fv(topLeftFront);
+  gGLFT->glVertex3fv(topRightFront);
+  gGLFT->glVertex3fv(bottomRightFront);
+
+  /*
+  gGLFT->glVertex3f(float(bmax.x),float(bmin.y),float(bmax.z));
+  gGLFT->glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
+  gGLFT->glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
+  gGLFT->glVertex3f(float(bmin.x),float(bmin.y),float(bmax.z));
+  */
+              /////////////////// RIGHT
+
+gGLFT->glNormal3f(-1, 0, 0);
+gGLFT->glVertex3fv(bottomRightBack);
+gGLFT->glVertex3fv(topRightBack);
+gGLFT->glVertex3fv(topRightFront);
+
+//gGLFT->glVertex3fv(topLeftFront);
+/*
+gGLFT->glVertex3f(float(bmax.x),float(bmin.y),float(bmax.z));
+gGLFT->glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
+gGLFT->glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
+gGLFT->glVertex3f(float(bmax.x),float(bmin.y),float(bmin.z));
+*/
+
+
+                ////////////////// TOP
+
+  gGLFT->glNormal3f(0, 1, 0);
+  gGLFT->glVertex3fv(topRightBack);
+  gGLFT->glVertex3fv(topLeftBack);
+  gGLFT->glVertex3fv(topLeftFront);
+
+/*
+  gGLFT->glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
+  gGLFT->glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
+  gGLFT->glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
+  gGLFT->glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
+*/
+                /////////////////// LEFT
+
+  gGLFT->glNormal3f(-1, 0, 0);
+  gGLFT->glVertex3fv(bottomLeftFront);
+  gGLFT->glVertex3fv(bottomLeftBack);
+  gGLFT->glVertex3fv(topLeftBack);
+
+/*
+  gGLFT->glVertex3f(float(bmin.x),float(bmin.y),float(bmax.z));
+  gGLFT->glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
+  gGLFT->glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
+  gGLFT->glVertex3f(float(bmin.x),float(bmin.y),float(bmin.z));
+*/
+                /////////////////// BACK -- correct
+
+  gGLFT->glNormal3f(0, 1, 0);
+  gGLFT->glVertex3fv(topRightBack);
+  gGLFT->glVertex3fv(bottomRightBack);
+  gGLFT->glVertex3fv(bottomLeftBack);
+
+/*
+  gGLFT->glNormal3f(0, 0, 1);
+  gGLFT->glVertex3f(float(bmax.x),float(bmin.y),float(bmin.z));
+  gGLFT->glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
+  gGLFT->glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
+  gGLFT->glVertex3f(float(bmin.x),float(bmin.y),float(bmin.z));
+*/
+
+
+  gGLFT->glEnd();
+
+  if (!poly){
+  // make the corners big points
+      gGLFT->glPushAttrib(GL_CURRENT_BIT);
+      gGLFT->glPointSize(5);
+      gGLFT->glBegin( GL_POINTS );
+      gGLFT->glVertex3f(float(bmin.x),float(bmin.y),float(bmin.z));
+      gGLFT->glVertex3f(float(bmin.x),float(bmin.y),float(bmax.z));
+      gGLFT->glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
+      gGLFT->glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
+      gGLFT->glVertex3f(float(bmax.x),float(bmin.y),float(bmin.z));
+      gGLFT->glVertex3f(float(bmax.x),float(bmin.y),float(bmax.z));
+      gGLFT->glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
+      gGLFT->glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
+      gGLFT->glEnd();
+  }
+  gGLFT->glPopAttrib();
+
+}
+
+
+void bb_alembicArchiveShapeUI::getDrawRequests(const MDrawInfo & info, bool /*objectAndActiveOnly*/,
+      MDrawRequestQueue & queue)
+{
+
+   // The draw data is used to pass geometry through the
+   // draw queue. The data should hold all the information
+   // needed to draw the shape.
+   //
+   MDrawData data;
+   MDrawRequest request = info.getPrototype(*this);
+   bb_alembicArchiveShape* archiveShape = (bb_alembicArchiveShape*) surfaceShape();
+   AlembicArchiveGeom* geom = archiveShape->geometry();
+   getDrawData(geom, data);
+   request.setDrawData(data);
+
+   //std::cout << "bb_alembicArchiveShapeUI::getDrawRequests" << std::endl;
+
+   // Are we displaying meshes?
+   if (!info.objectDisplayStatus(M3dView::kDisplayMeshes))
+      return;
+
+   getDrawRequestsWireFrame(request, info);
+   queue.add(request);
+
+}
+
+void bb_alembicArchiveShapeUI::getDrawRequestsWireFrame(MDrawRequest& request, const MDrawInfo& info)
+{
+   request.setToken(kDrawBoundingBox);
+   M3dView::DisplayStatus displayStatus = info.displayStatus();
+   M3dView::ColorTable activeColorTable = M3dView::kActiveColors;
+   M3dView::ColorTable dormantColorTable = M3dView::kDormantColors;
+
+   //std::cout << "bb_alembicArchiveShapeUI::getDrawRequestsWireFrame" << std::endl;
+
+   switch (displayStatus)
+   {
+   case M3dView::kLead:
+      request.setColor(LEAD_COLOR, activeColorTable);
+      break;
+   case M3dView::kActive:
+      request.setColor(ACTIVE_COLOR, activeColorTable);
+      break;
+   case M3dView::kActiveAffected:
+      request.setColor(ACTIVE_AFFECTED_COLOR, activeColorTable);
+      break;
+   case M3dView::kDormant:
+      request.setColor(DORMANT_COLOR, dormantColorTable);
+      break;
+   case M3dView::kHilite:
+      request.setColor(HILITE_COLOR, activeColorTable);
+      break;
+   default:
+      break;
+   }
+
+}
+void bb_alembicArchiveShapeUI::draw( const MDrawRequest & request, M3dView & view ) const
+{
+    MStatus st;
+
+    // Initialize GL function table first time through
+    static MGLFunctionTable *gGLFT = NULL;
+    if (gGLFT == NULL)
+       gGLFT = MHardwareRenderer::theRenderer()->glFunctionTable();
+
+    MDrawData data = request.drawData();
+
+    bb_alembicArchiveShape* archiveShape =  (bb_alembicArchiveShape*)surfaceShape();
+    AlembicArchiveGeom * geom = (AlembicArchiveGeom*) data.geometry();
+
+    MBoundingBox bb = archiveShape->boundingBox();
+    MVector bmin,bmax;
+    bmin=bb.min();
+    bmax=bb.max();
+
+    MColor col;
+
+    view.beginGL();
+
+//    std::cout << "bb_alembicArchiveShapeUI::draw" << std::endl;
+      // Calculate scaled BBox dimensions
+ /*     float halfSize[3] =
+      {0.5f*(bmax[0] - bmin[0]), 0.5f*(bmax[1] - bmin[1]), 0.5f*(bmax[2] - bmin[2])};
+      float center[3] =
+      {0.5f*(bmax[0] + bmin[0]), 0.5f*(bmax[1] + bmin[1]), 0.5f*(bmax[2] + bmin[2])};
+      float sbottomLeftFront[3] =
+      {-halfSize[0]*geom->scale + center[0], -halfSize[1]*geom->scale + center[1], -halfSize[2]*geom->scale + center[2]};
+      float stopLeftFront[3] =
+      {-halfSize[0]*geom->scale + center[0],  halfSize[1]*geom->scale + center[1], -halfSize[2]*geom->scale + center[2]};
+      float sbottomRightFront[3] =
+      { halfSize[0]*geom->scale + center[0], -halfSize[1]*geom->scale + center[1], -halfSize[2]*geom->scale + center[2]};
+      float stopRightFront[3] =
+      { halfSize[0]*geom->scale + center[0],  halfSize[1]*geom->scale + center[1], -halfSize[2]*geom->scale + center[2]};
+      float sbottomLeftBack[3] =
+      {-halfSize[0]*geom->scale + center[0], -halfSize[1]*geom->scale + center[1],  halfSize[2]*geom->scale + center[2]};
+      float stopLeftBack[3] =
+      {-halfSize[0]*geom->scale + center[0],  halfSize[1]*geom->scale + center[1],  halfSize[2]*geom->scale + center[2]};
+      float sbottomRightBack[3] =
+      { halfSize[0]*geom->scale + center[0], -halfSize[1]*geom->scale + center[1],  halfSize[2]*geom->scale + center[2]};
+      float stopRightBack[3] =
+      { halfSize[0]*geom->scale + center[0],  halfSize[1]*geom->scale + center[1],  halfSize[2]*geom->scale + center[2]};
+
+      gGLFT->glNewList(geom->dList+1, MGL_COMPILE);
+      gGLFT->glBegin(MGL_LINE_STRIP);
+      gGLFT->glVertex3fv(sbottomLeftFront);
+      gGLFT->glVertex3fv(sbottomLeftBack);
+      gGLFT->glVertex3fv(stopLeftBack);
+      gGLFT->glVertex3fv(stopLeftFront);
+      gGLFT->glVertex3fv(sbottomLeftFront);
+      gGLFT->glVertex3fv(sbottomRightFront);
+      gGLFT->glVertex3fv(sbottomRightBack);
+      gGLFT->glVertex3fv(stopRightBack);
+      gGLFT->glVertex3fv(stopRightFront);
+      gGLFT->glVertex3fv(sbottomRightFront);
+      gGLFT->glEnd();
+
+      gGLFT->glBegin(MGL_LINES);
+      gGLFT->glVertex3fv(sbottomLeftBack);
+      gGLFT->glVertex3fv(sbottomRightBack);
+
+      gGLFT->glVertex3fv(stopLeftBack);
+      gGLFT->glVertex3fv(stopRightBack);
+
+      gGLFT->glVertex3fv(stopLeftFront);
+      gGLFT->glVertex3fv(stopRightFront);
+      gGLFT->glEnd();
+      gGLFT->glEndList();
+*/
+
+    drawABox(bmin, bmax,false);
+
+
+    // init gl shaders - DISABLED FOR NOW - not even sure if we can do this here
+    // glshader.init((char *)vshader, (char *)fshader);
+/*
+    if (request.token() == kDrawWireframe){
+
+        gGLFT->glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+
+    } else {
+        gGLFT->glShadeModel( GL_SMOOTH );
+        gGLFT->glEnable(GL_LIGHTING);
+        gGLFT->glEnable(GL_COLOR_MATERIAL);
+        gGLFT->glEnable (GL_BLEND);
+        gGLFT->glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    }
+
+*/
+    // Now for the geo ....
+
+
+    view.endGL();
+
+    // update scene if needed
+    //if (m_abcdirty) updateAbc(this);
+
+//    std::cout << "draw" << std::endl;
+//    timer::timer TIMER;
+//    TIMER.start();
+
+/*
+    if (status == 8) {
+        col = MColor(0.8,1.0,0.8);
+    } else if (status == 0) {
+        col = MColor(0.25,1.0,0.5);
+    } else {
+        col = MColor(0.7,0.5,0.5);
+    }
+*/
+    /*
+    switch (status)  // From M3dView::DisplayStatus status  in the draw() command
+    {
+                case M3dView::kLead:
+                        col= MColor(0.26, 1.0, 0.64)  ;         // maya green
+                        bColOverride = true;
+                        break ;
+
+                case M3dView::kActive:
+                        col = MColor(1.0, 1.0, 1.0)  ;          // maya white
+                        bColOverride = true;
+                        break ;
+
+                case M3dView::kActiveAffected:
+                        col = MColor(0.78, 1.0, 0.78)  ;        // maya magenta
+                        bColOverride = true;
+                        break ;
+
+                case M3dView::kTemplate:
+                        col = MColor(0.47, 0.47, 0.47)  ;       // maya template gray
+                        bColOverride = true;
+                        break ;
+
+                case M3dView::kActiveTemplate:
+                        col = MColor(1.0, 0.47, 0.47)  ;        // maya selected template pink
+                        bColOverride = true;
+                        break ;
+
+                default:
+                        //col = MColor(0.7,0.5,0.5);
+                        col = MColor(0.1, 0.2, 0.7) ;   // else set color as desired
+    }
+        */
+/*
+    // this makes a copy of the current openGL settings so that anything
+    // we change will not affect anything else maya draws afterwards.
+    glPushAttrib( GL_ALL_ATTRIB_BITS );
+
+    archiveShape->setHolderTime();
+
+    // glUseProgram(glshader.getProgram());
+*/
+//    glColor3f(col.r,col.g,col.b);
+
+    //MFnDagNode fn( thisNode );
+
+
+
+    //MPlug glPlug(archiveShape->aShowGL);
+    //bool doGL = glPlug.asBool() ;
+
+    // draw the "scene" from the alembic file
+/*
+    bool proxy = false;
+
+    MPlug plug =  fn.findPlug( aShowProxy );
+    plug.getValue( proxy );
+
+    std::string sceneKey = getSceneKey(proxy);
+    if (abcSceneManager.hasKey(sceneKey) && doGL){
+        abcSceneManager.getScene(sceneKey)->draw(abcSceneState);
+    }
+    else if (abcSceneManager.hasKey(sceneKey) && !doGL){
+        drawABox(bmin, bmax,true);
+    }
+
+
+
+
+*/
+
+}
+
+/* override */
+bool bb_alembicArchiveShapeUI::select( MSelectInfo &selectInfo, MSelectionList &selectionList,
+                                        MPointArray &worldSpaceSelectPts ) const
+//
+// Description:
+//
+//     Main selection routine
+//
+// Arguments:
+//
+//     selectInfo           - the selection state information
+//     selectionList        - the list of selected items to add to
+//     worldSpaceSelectPts  -
+//
+{
+
+  MSelectionMask priorityMask(MSelectionMask::kSelectObjectsMask);
+  MSelectionList item;
+  item.add(selectInfo.selectPath());
+  MPoint xformedPt;
+  selectInfo.addSelection(item, xformedPt, selectionList, worldSpaceSelectPts, priorityMask, false);
+  return true;
+}

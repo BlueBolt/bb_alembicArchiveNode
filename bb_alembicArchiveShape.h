@@ -28,9 +28,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 Author:Ashley Retallack - ashley-r@blue-bolt.com
 
-File:alembicArchiveNode.h
+File:bb_alembicArchiveShape.h
 
-Dependency Graph Node: alembicArchiveNode
+Dependency Graph Node: bb_alembicArchiveShape
 
 Based upon animaAlembicHolder by Olli Rajala @ anima
 
@@ -49,7 +49,9 @@ Based upon animaAlembicHolder by Olli Rajala @ anima
 #include <Alembic/AbcGeom/ISubD.h>
 
 #include <maya/MPxNode.h>
-#include <maya/MPxLocatorNode.h>
+#include <maya/MPxSurfaceShape.h>
+#include <maya/MPxSurfaceShapeUI.h>
+
 #include <maya/MFnNumericAttribute.h>
 #include <maya/MFnCompoundAttribute.h>
 #include <maya/MFnData.h>
@@ -57,7 +59,8 @@ Based upon animaAlembicHolder by Olli Rajala @ anima
 #include <maya/MFnMessageAttribute.h>
 #include <maya/MFnTypedAttribute.h>
 #include <maya/MFnUnitAttribute.h>
-#include <maya/MBoundingBox.h>
+#include <maya/MFnEnumAttribute.h>
+
 #include <maya/MString.h>
 #include <maya/MStringArray.h>
 #include <maya/MFloatVector.h>
@@ -69,7 +72,9 @@ Based upon animaAlembicHolder by Olli Rajala @ anima
 #include <maya/MFnDependencyNode.h>
 #include <maya/MDagPath.h>
 #include <maya/MNodeMessage.h>
-#include <maya/MItSelectionList.h>
+
+
+#include <maya/MTextureEditorDrawInfo.h>
 
 //include the renderman interface header for the procedural stuff
 #include <ri.h>
@@ -80,84 +85,110 @@ Based upon animaAlembicHolder by Olli Rajala @ anima
 
 #include "GlShaderHolder.h"
 
-class alembicArchiveNode : public MPxLocatorNode
+// Geometry class
+class AlembicArchiveGeom
 {
 public:
-                        alembicArchiveNode();
-    virtual             ~alembicArchiveNode(); 
+  AlembicArchiveGeom();
+   MString dso;
+   MString data;
+   MString filename;
+   MString geomLoaded;
+   std::string scenekey;
+   int mode;
+   float frame;
+   float frameOffset;
+   bool useFrameExtension;
+   bool useSubFrame;
+   bool IsGeomLoaded;
+   MBoundingBox bbox;
+   bool deferStandinLoad;
+   float scale;
+   MPoint BBmin;
+   MPoint BBmax;
+   int dList;
+   int updateView;
+   int updateBBox;
+
+};
+
+// Shape class - defines the non-UI part of a shape node
+class bb_alembicArchiveShape : public MPxSurfaceShape
+{
+public:
+                        bb_alembicArchiveShape();
+    virtual             ~bb_alembicArchiveShape();
 
     virtual void postConstructor();
+    virtual MStatus     compute( const MPlug& plug, MDataBlock& data );
     virtual void copyInternalData( MPxNode* srcNode );
-    virtual void draw( M3dView&, const MDagPath&, M3dView::DisplayStyle, M3dView::DisplayStatus);
+    //virtual void draw( M3dView&, const MDagPath&, M3dView::DisplayStyle, M3dView::DisplayStatus);
 
     virtual bool isBounded() const;
     virtual MBoundingBox boundingBox()const ;
-    virtual bool excludeAsLocator() const;
+    AlembicArchiveGeom* geometry();
 
-    virtual MStatus     compute( const MPlug& plug, MDataBlock& data );
-    
     double setHolderTime(bool atClose) const;
 
     static  void*       creator();
     static  MStatus     initialize();
 
-        MStatus     doSomething();
-        
     std::string getSceneKey(bool proxy) const;
 
-	MStatus emitCache(float relativeFrame=0.0f) ;
+    MStatus emitCache(float relativeFrame=0.0f) ;
 
 public:
 
-    static  MObject     aAbcFile; 
-    static  MObject     aObjectPath; 
+    static  MObject    aAbcFile;
+    static  MObject    aObjectPath;
 
-    static  MObject     aShowProxy;
-    static  MObject     aProxyPath;
+    static  MObject    aShowProxy;
+    static  MObject    aProxyPath;
 
-    static  MObject     aTime;
-    static  MObject     aTimeOffset;
-    static  MObject     aShutterOpen;
-    static  MObject     aShutterClose;
-    static  MObject     aOutFps;
-    static  MObject     aOutFrame;
-    static  MObject     aBBMin;
-    static  MObject     aBBMax;
-    static	MObject		aBBSize;
-    static	MObject		aBB;
+    static  MObject    aTime;
+    static  MObject    aTimeOffset;
+    static  MObject    aShutterOpen;
+    static  MObject    aShutterClose;
+    static  MObject    aOutFps;
+    static  MObject    aOutFrame;
+    static  MObject    aBBMin;
+    static  MObject    aBBMax;
+    static  MObject    aBBSize;
+    static  MObject    aBB;
 
-    static	MObject		aOutUVs;
-    static	MObject		aObjects;
+    static  MObject    aOutUVs;
+    static  MObject    aOutUDIMs;
+    static  MObject    aObjects;
 
-    static  MObject     aFurBBPad;
-    static  MObject     aFurBBMin;
-    static  MObject     aFurBBMax;
-    static	MObject		aFurBBSize;
-    static 	MObject		aFurBB;
+    // padded bounding box attributes
+    static  MObject    aFurBBPad;
+    static  MObject    aFurBBMin;
+    static  MObject    aFurBBMax;
+    static  MObject    aFurBBSize;
+    static  MObject    aFurBB;
 
-    static  MObject     aBBCenter;
+    static  MObject    aBBCenter;
 
-    static  MObject     aFurLOD;
+    static  MObject    aFurLOD;
     
-    static  MObject     aShowBB;
-    static  MObject     aShowGL;
-    static  MObject     aFlipV;
+    static  MObject    aShowBB;
+    static  MObject    aShowGL;
+    static  MObject    aFlipV;
 //    static  MObject     aShowFurBB;
-    static  MObject     aPolyAsSubD;
+    static  MObject    aPolyAsSubD;
 
     // Arnold stuff
-    static  MObject     aSubDIterations;
-    static  MObject     aSubDUVSmoothing;
+    static  MObject    aSubDIterations;
+    static  MObject    aSubDUVSmoothing;
+    static  MObject    aMakeInstance;
 
-    static  MObject     aExportFaceIds;
-//    static  MObject     aFaceIdAttributeName;
+    static  MObject    aExportFaceIds;
 
+    std::vector<Alembic::Abc::IObject>  outIObjList;
+    std::vector<Alembic::Abc::IObject>  fullOutIObjList;
 
-	//std::set<std::string>  outIObjList;
-	std::vector<Alembic::Abc::IObject>  outIObjList;
-	std::vector<Alembic::Abc::IObject>  fullOutIObjList;
-
-    static  MTypeId     id;
+    static  MTypeId     id; // nodeId
+    static  MString     name; // nodeName
     
     static SimpleAbcViewer::SceneState   abcSceneState;
 
@@ -166,34 +197,66 @@ public:
     std::string m_currscenekey;
     MStringArray m_objects;
     MIntArray m_uvs;
+    MIntArray m_udims;
     int m_bbmode;
     bool m_abcdirty;
+    bool m_showbb;
     SimpleAbcViewer::ScenePtr m_scene;
     
     static GlShaderHolder glshader;
     
-	MStatus archiveShadersAndAttribs() const;
+    MStatus archiveShadersAndAttribs() const;
 
-	int archiveAttribs(	const MStringArray & shapeNames) const;
+    int archiveAttribs(	const MStringArray & shapeNames) const;
 
-	int archiveShaders(	const MStringArray & shapeNames) const;
+    int archiveShaders(	const MStringArray & shapeNames) const;
 
-	MStringArray getObjects();
-	MIntArray getUVShells();
-	//void walk(Alembic::Abc::IObject iObj, std::set<Alembic::Abc::IObject> outIObjList);
-
-	//void walk(Alembic::Abc::IObject iObj);
+    MStringArray getObjects();
+    MIntArray getUVShells();
+    MIntArray getUDIMs();
 
 private:
+    AlembicArchiveGeom fGeometry;
 
-	void drawABox(const MVector &bbmin, const MVector &bbmax, bool poly) ;
+    void walk(Alembic::Abc::IObject iObj);
 
-	void walk(Alembic::Abc::IObject iObj);
-
-	WriterData oData;
-
+    WriterData oData;
 
 };
+
+
+// UI class - defines the UI part of a shape node
+class bb_alembicArchiveShapeUI: public MPxSurfaceShapeUI
+{
+public:
+  bb_alembicArchiveShapeUI();
+   virtual ~bb_alembicArchiveShapeUI();
+   virtual void getDrawRequests(const MDrawInfo & info,
+         bool objectAndActiveOnly, MDrawRequestQueue & requests);
+   virtual void drawABox(const MVector &bbmin, const MVector &bbmax, bool poly) const;
+   virtual void draw(const MDrawRequest & request, M3dView & view) const;
+   virtual bool select(MSelectInfo &selectInfo, MSelectionList &selectionList,
+         MPointArray &worldSpaceSelectPts) const;
+
+   void getDrawRequestsWireFrame(MDrawRequest&, const MDrawInfo&);
+
+   static void * creator();
+   // Draw Tokens
+   //
+   enum
+   {
+     kDrawVertices, // component token
+     kDrawWireframe,
+     kDrawWireframeOnShaded,
+     kDrawSmoothShaded,
+     kDrawFlatShaded,
+     kDrawBoundingBox,
+     kDrawRedPointAtCenter,  // for userInteraction example code
+     kLastToken
+   };
+
+}; // class bb_alembicArchiveShapeUI
+
 
 inline MStatus bbValue(const MPlug &bbPlug, MVector &bmin, MVector &bmax) {
 	MStatus st;
@@ -231,7 +294,7 @@ inline MStatus bbValue(const MPlug &bbPlug, MVector &bmin, MVector &bmax) {
 	st =maxZPlug.getValue (maxz );
 
 
-
+	// Apply the vectors
 	bmin=MVector(minx,miny,minz);
 	bmax=MVector(maxx,maxy,maxz);
 	return MS::kSuccess;

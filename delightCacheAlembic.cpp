@@ -50,7 +50,8 @@ Maya Command: delightCacheAlembic
 #include "errorMacros.h"
 
 #include "delightCacheAlembic.h"
-#include "alembicArchiveNode.h"
+
+#include "bb_alembicArchiveShape.h"
 
 #include <ri.h>
 
@@ -92,16 +93,16 @@ MStatus delightCacheAlembic::doIt( const MArgList& args )
 	MObject  archiveObject;
 	MDagPath archiveDagPath;
 	MFnDependencyNode archiveFn;
-	alembicArchiveNode * alembicArchive = 0;
+	bb_alembicArchiveShape * alembicArchive = 0;
 	MString fullPathName;
 
 	for (;! iter.isDone() ; iter.next()) {
 		iter.getDependNode( archiveObject );
 		archiveFn.setObject( archiveObject );
-		if (archiveFn.typeId() == alembicArchiveNode::id) {
+		if (archiveFn.typeId() == bb_alembicArchiveShape::id) {
 			iter.getDagPath( archiveDagPath );
 			fullPathName = archiveDagPath.fullPathName();
-			alembicArchive =  (alembicArchiveNode*)archiveFn.userNode();
+			alembicArchive =  (bb_alembicArchiveShape*)archiveFn.userNode();
 			break;
 		}
 	}
@@ -179,8 +180,8 @@ MStatus delightCacheAlembic::doIt( const MArgList& args )
 		for ( ;!dagIter.isDone();dagIter.next()){
 			archiveObject = dagIter.currentItem();
 			archiveFn.setObject( archiveObject );
-			if (archiveFn.typeId() == alembicArchiveNode::id) {
-				alembicArchive =  (alembicArchiveNode*)archiveFn.userNode();
+			if (archiveFn.typeId() == bb_alembicArchiveShape::id) {
+				alembicArchive =  (bb_alembicArchiveShape*)archiveFn.userNode();
 				//st = alembicArchive->removeCache();
 			}
 		}
@@ -195,8 +196,8 @@ MStatus delightCacheAlembic::doIt( const MArgList& args )
 		for ( ;!dagIter.isDone();dagIter.next()){
 			archiveObject = dagIter.currentItem();
 			archiveFn.setObject( archiveObject );
-			if (archiveFn.typeId() == alembicArchiveNode::id) {
-				alembicArchive =  (alembicArchiveNode*)archiveFn.userNode();
+			if (archiveFn.typeId() == bb_alembicArchiveShape::id) {
+				alembicArchive =  (bb_alembicArchiveShape*)archiveFn.userNode();
 				//if (alembicArchive->hasCache()) {
 					appendToResult(dagIter.fullPathName());
 				//}
@@ -213,8 +214,8 @@ MStatus delightCacheAlembic::doIt( const MArgList& args )
 		for ( ;!dagIter.isDone();dagIter.next()){
 			archiveObject = dagIter.currentItem();
 			archiveFn.setObject( archiveObject );
-			if (archiveFn.typeId() == alembicArchiveNode::id) {
-				alembicArchive =  (alembicArchiveNode*)archiveFn.userNode();
+			if (archiveFn.typeId() == bb_alembicArchiveShape::id) {
+				alembicArchive =  (bb_alembicArchiveShape*)archiveFn.userNode();
 				cerr << dagIter.fullPathName() << endl;;
 				/*if (alembicArchive->hasCache()) {
 					cerr << "Cache  Exists" << endl;

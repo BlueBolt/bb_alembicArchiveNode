@@ -39,7 +39,7 @@
 //#include "ISimpleXformDrw.h"
 #include "IXformDrw.h"
 //#include "IPointsDrw.h"
-//#include "ISubDDrw.h"
+#include "ISubDDrw.h"
 
 namespace SimpleAbcViewer {
 
@@ -114,15 +114,15 @@ IObjectDrw::IObjectDrw( IObject &iObj, bool iResetIfNoChildren, std::vector<std:
                     dptr.reset( new IXformDrw( xform, path ) );
                 }
             }
-    /*        else if ( ISubD::matches( ohead ) )
+            else if ( ISubD::matches( ohead ) )
             {
                 ISubD subd( m_object, ohead.getName() );
                 if ( subd )
                 {
-                    dptr.reset( new ISubDDrw( subd ) );
+                    dptr.reset( new ISubDDrw( subd, path  ) );
                 }
             }
-    */        else
+            else
             {
                 IObject object( m_object, ohead.getName() );
                 if ( object )

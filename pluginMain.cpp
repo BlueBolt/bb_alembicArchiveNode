@@ -33,7 +33,7 @@ File:pluginMain.cpp
 **/
 
 
-#include "alembicArchiveNode.h"
+#include "bb_alembicArchiveShape.h"
 #include "delightCacheAlembic.h"
 
 #include "errorMacros.h"
@@ -44,19 +44,20 @@ File:pluginMain.cpp
 MStatus initializePlugin( MObject obj )
 { 
     MStatus   st;
-    const char * pluginVersion = "0.2.10";
+    const char * pluginVersion = "1.0.3";
     MFnPlugin plugin( obj, "BlueBolt Ltd.",pluginVersion, "Any");
 
-    st = plugin.registerNode( "alembicArchiveNode", alembicArchiveNode::id, alembicArchiveNode::creator, alembicArchiveNode::initialize, MPxNode::kLocatorNode );
+    st = plugin.registerShape( bb_alembicArchiveShape::name, bb_alembicArchiveShape::id, bb_alembicArchiveShape::creator, bb_alembicArchiveShape::initialize, bb_alembicArchiveShapeUI::creator );
+
     if (!st) {
         st.perror("registerNode");
         return st;
     }
 
-	st = plugin.registerCommand( "delightCacheAlembic",delightCacheAlembic::creator ,delightCacheAlembic::newSyntax);
+    st = plugin.registerCommand( "delightCacheAlembic",delightCacheAlembic::creator ,delightCacheAlembic::newSyntax);
 
-
-    MString info = "alembicArchiveNode v";
+    MString info = bb_alembicArchiveShape::name;
+        info += " v";
         info += pluginVersion;
         info += " using ";
         info += Alembic::AbcCoreAbstract::GetLibraryVersion().c_str();
@@ -71,7 +72,7 @@ MStatus uninitializePlugin( MObject obj)
     MFnPlugin plugin( obj );
 
 
-    st = plugin.deregisterNode( alembicArchiveNode::id );
+    st = plugin.deregisterNode( bb_alembicArchiveShape::id );
     if (!st) {
         st.perror("deregisterNode");
         return st;
