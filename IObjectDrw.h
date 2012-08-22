@@ -40,6 +40,9 @@
 #include "Foundation.h"
 #include "Drawable.h"
 
+#include <maya/MHardwareRenderer.h>
+#include <maya/MGLFunctionTable.h>
+
 namespace SimpleAbcViewer {
 
 //-*****************************************************************************
@@ -78,6 +81,7 @@ protected:
     DrawablePtrVec m_children;
 
     Box3d m_bounds;
+
 };
 
 } // End namespace SimpleAbcViewer

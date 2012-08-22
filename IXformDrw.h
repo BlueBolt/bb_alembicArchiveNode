@@ -40,6 +40,10 @@
 #include "Foundation.h"
 #include "IObjectDrw.h"
 
+#include <maya/MHardwareRenderer.h>
+#include <maya/MGLFunctionTable.h>
+#include <maya/MBoundingBox.h>
+
 namespace SimpleAbcViewer {
 
 //-*****************************************************************************
@@ -63,6 +67,7 @@ public:
 protected:
     IXform m_xform;
     M44d m_localToParent;
+	static MGLFunctionTable* g_GLFT;
 };
 
 } // End namespace SimpleAbcViewer

@@ -53,7 +53,7 @@ IObjectDrw::IObjectDrw( IObject &iObj, bool iResetIfNoChildren, std::vector<std:
     // If not valid, just bail.
     if ( !m_object ) { return; }
 
-    //std::cout << "IObjectDraw path: " << path << std::endl;
+//    std::cout << "IObjectDraw path: " << path << std::endl;
     if (path.size()) {
         const ObjectHeader *ohead = m_object.getChildHeader( path[0] );
         if ( ohead!=NULL ) {

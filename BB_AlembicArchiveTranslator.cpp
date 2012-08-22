@@ -26,9 +26,6 @@ class BB_AlembicArchiveTranslator : public CShapeTranslator
                 {
                   m_isMasterDag =  IsMasterInstance(m_masterDag);
 
-                  std::cout << "CreateArnoldNodes::m_masterDag :: " <<  m_masterDag.partialPathName().asChar() << std::endl;
-                  std::cout << "CreateArnoldNodes::m_masterDag.apiTypeStr :: " <<  m_masterDag.node().apiTypeStr() << std::endl;
-
                   if (m_isMasterDag)
                   {
                       return AddArnoldNode( "procedural" );
@@ -44,7 +41,6 @@ class BB_AlembicArchiveTranslator : public CShapeTranslator
                 void Export( AtNode *node )
                 {
                   const char* nodeType = AiNodeEntryGetName(AiNodeGetNodeEntry(node));
-                  std::cout << "Export::node :: " << AiNodeGetName(node) << std::endl;
                   if (strcmp(nodeType, "ginstance") == 0)
                   {
                      ExportInstance(node, m_masterDag);
@@ -72,8 +68,6 @@ class BB_AlembicArchiveTranslator : public CShapeTranslator
                 {
                    AtNode* masterNode = AiNodeLookUpByName(masterInstance.partialPathName().asChar());
 
-                   std::cout << "ExportInstance::masterNode :: " << AiNodeGetName(masterNode) << std::endl;
-                   std::cout << "ExportInstance::instance :: " << AiNodeGetName(instance) << std::endl;
 
                    int instanceNum = m_dagPath.instanceNumber();
 
@@ -91,7 +85,7 @@ class BB_AlembicArchiveTranslator : public CShapeTranslator
                        int visibility = AiNodeGetInt(masterNode, "visibility");
                        AiNodeSetInt(instance, "visibility", visibility);
 
-                       AiNodeSetPtr( instance, "shader", arnoldShader() );
+                       AiNodeSetPtr( instance, "shader", arnoldShader(instance) );
 
                        // Export light linking per instance
                        ExportLightLinking(instance);
@@ -102,11 +96,9 @@ class BB_AlembicArchiveTranslator : public CShapeTranslator
                 virtual void ExportProcedural( AtNode *node )
                 {
                         // do basic node export
-                  std::cout << "ExportProcedural::node :: " << AiNodeGetName(node) << std::endl;
-
                         ExportMatrix( node, 0 );
 
-                        AiNodeSetPtr( node, "shader", arnoldShader() );
+                        AiNodeSetPtr( node, "shader", arnoldShader(node) );
 
                         AiNodeSetInt( node, "visibility", ComputeVisibility() );
 
@@ -133,8 +125,8 @@ class BB_AlembicArchiveTranslator : public CShapeTranslator
                         MFnDagNode fnDagNode( m_dagPath );
                         MBoundingBox bound = fnDagNode.boundingBox();
 
-                        AiNodeSetPnt( node, "min", bound.min().x, bound.min().y, bound.min().z );
-                        AiNodeSetPnt( node, "max", bound.max().x, bound.max().y, bound.max().z );
+                        AiNodeSetPnt( node, "min", bound.min().x-m_dispPadding, bound.min().y-m_dispPadding, bound.min().z-m_dispPadding );
+                        AiNodeSetPnt( node, "max", bound.max().x+m_dispPadding, bound.max().y, bound.max().z+m_dispPadding );
 
                         const char *dsoPath = getenv( "ALEMBIC_ARNOLD_PROCEDURAL_PATH" );
                         AiNodeSetStr( node, "dso",  dsoPath ? dsoPath : "bb_AlembicArnoldProcedural.so" );
@@ -215,10 +207,6 @@ class BB_AlembicArchiveTranslator : public CShapeTranslator
                                 argsString += " -shutterclose ";
                                 argsString += shutterClose;
                         }
-                        if (shutterClose != 0.0){
-                                argsString += " -shutterclose ";
-                                argsString += shutterClose;
-                        }
                         if (subDIterations != 0){
                                 argsString += " -subditerations ";
                                 argsString += subDIterations;
@@ -233,10 +221,17 @@ class BB_AlembicArchiveTranslator : public CShapeTranslator
                         argsString += " -frame ";
                         argsString += time;
 
+                        if (m_displaced){
+
+                            argsString += " -disp_map ";
+                            argsString += AiNodeGetName(m_dispNode);
+
+                        }
+
                         AiNodeSetStr(node, "data", argsString.asChar());
 
                         // Export light linking per instance
-//                        ExportLightLinking(node);
+                        ExportLightLinking(node);
 
                 }
 
@@ -273,21 +268,75 @@ class BB_AlembicArchiveTranslator : public CShapeTranslator
 
         protected :
 
+                void GetDisplacement(MObject& obj,
+                                                          float& dispPadding,
+                                                          bool& enableAutoBump)
+                {
+                   MFnDependencyNode dNode(obj);
+                   MPlug plug = dNode.findPlug("aiDisplacementPadding");
+                   if (!plug.isNull())
+                      dispPadding = MAX(dispPadding, plug.asFloat());
+                   if (!enableAutoBump)
+                   {
+                      plug = dNode.findPlug("aiDisplacementAutoBump");
+                      if (!plug.isNull())
+                         enableAutoBump = enableAutoBump || plug.asBool();
+                   }
+                }
+
                 /// Returns the arnold shader assigned to the procedural. This duplicates
                 /// code in GeometryTranslator.h, but there's not much can be done about that
                 /// since the GeometryTranslator isn't part of the MtoA public API.
-                AtNode *arnoldShader()
+                AtNode *arnoldShader(AtNode* node)
                 {
-                        unsigned instNumber = m_dagPath.isInstanced() ? m_dagPath.instanceNumber() : 0;
-                        MPlug shadingGroupPlug = GetNodeShadingGroup(m_dagPath.node(), instNumber);
-                        return m_session->ExportNode( shadingGroupPlug );
+                  m_displaced = false;
+
+                  float maximumDisplacementPadding = -AI_BIG;
+                  bool enableAutoBump = false;
+
+                  unsigned instNumber = m_dagPath.isInstanced() ? m_dagPath.instanceNumber() : 0;
+                  MPlug shadingGroupPlug = GetNodeShadingGroup(m_dagPath.node(), instNumber);
+
+                  //find and export any displacment shaders attached
+                  // DISPLACEMENT MATERIAL EXPORT
+                  MPlugArray        connections;
+                  MFnDependencyNode fnDGShadingGroup(shadingGroupPlug.node());
+                  MPlug shaderPlug = fnDGShadingGroup.findPlug("displacementShader");
+                  shaderPlug.connectedTo(connections, true, false);
+
+                  // are there any connections to displacementShader?
+                  if (connections.length() > 0)
+                  {
+                     m_displaced = true;
+                     MObject dispNode = connections[0].node();
+                     GetDisplacement(dispNode, maximumDisplacementPadding, enableAutoBump);
+                     m_dispPadding = maximumDisplacementPadding;
+                     AtNode* dispImage(ExportNode(connections[0]));
+
+                     m_dispNode = dispImage;
+                  }
+
+                  // Only export displacement attributes if a displacement is applied
+                  if (m_displaced)
+                  {
+                      std::cout << "arnoldShader::m_displaced :: " << m_displaced << std::endl;
+                     // Note that disp_height has no actual influence on the scale of the displacement if it is vector based
+                     // it only influences the computation of the displacement bounds
+                    // AiNodeSetFlt(node, "disp_padding", maximumDisplacementPadding);
+                  }
+
+                  // return the exported surface shader
+                  return m_session->ExportNode( shadingGroupPlug );
                 }
 
         protected :
                 MFnDagNode m_DagNode;
                 bool m_isMasterDag;
-                MDagPath m_dagPath;
+                bool m_displaced;
+                float m_dispPadding;
+                MDagPath m_dagPathRef;
                 MDagPath m_masterDag;
+                AtNode* m_dispNode;
 };
 
 extern "C"

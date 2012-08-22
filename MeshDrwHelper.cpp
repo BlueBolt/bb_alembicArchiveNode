@@ -364,6 +364,7 @@ void MeshDrwHelper::updateArbs(Alembic::Abc::ICompoundProperty & iParent,
 //-*****************************************************************************
 void MeshDrwHelper::draw( const DrawContext & iCtx ) const
 {
+
     // Bail if invalid.
     if ( !m_valid || m_triangles.size() < 1 || !m_meshP )
     {
@@ -389,48 +390,11 @@ void MeshDrwHelper::draw( const DrawContext & iCtx ) const
 
     }
 
-#ifndef SIMPLE_ABC_VIEWER_NO_GL_CLIENT_STATE
-//#if 0
-    {
-        GL_NOISY( glEnableClientState( GL_VERTEX_ARRAY ) );
-        if ( normals )
-        {
-            GL_NOISY( glEnableClientState( GL_NORMAL_ARRAY ) );
-            GL_NOISY( glNormalPointer( GL_FLOAT, 0,
-                                       ( const GLvoid * )normals ) );
-        }
+    static MGLFunctionTable *gGLFT = NULL;
+    if (gGLFT == NULL)
+       gGLFT = MHardwareRenderer::theRenderer()->glFunctionTable();
 
-        if ( colors )
-        {
-            GL_NOISY( glEnableClientState( GL_COLOR_ARRAY ) );
-            GL_NOISY( glColorPointer( 4, GL_FLOAT, 0,
-                                       ( const GLvoid * )colors ) );
-            glAlphaFunc ( GL_GREATER, 0.5 ) ;
-            glEnable ( GL_ALPHA_TEST ) ;
-        }
-
-        GL_NOISY( glVertexPointer( 3, GL_FLOAT, 0,
-                                   ( const GLvoid * )points ) );
-
-        GL_NOISY( glDrawElements( GL_TRIANGLES,
-                                  ( GLsizei )m_triangles.size() * 3,
-                                  GL_UNSIGNED_INT,
-                                  ( const GLvoid * )&(m_triangles[0]) ) );
-
-        if ( colors )
-        {
-            glDisable ( GL_ALPHA_TEST ) ;
-            GL_NOISY( glDisableClientState( GL_COLOR_ARRAY ) );
-        }
-        
-        if ( normals )
-        {
-            GL_NOISY( glDisableClientState( GL_NORMAL_ARRAY ) );
-        }
-        GL_NOISY( glDisableClientState( GL_VERTEX_ARRAY ) );
-    }
-#else
-    glBegin( GL_TRIANGLES );
+    gGLFT->glBegin( MGL_TRIANGLES );
 
     for ( size_t i = 0; i < m_triangles.size(); ++i )
     {
@@ -442,16 +406,16 @@ void MeshDrwHelper::draw( const DrawContext & iCtx ) const
         if ( normals )
         {
             const V3f &normA = normals[tri[0]];
-            glNormal3fv( ( const GLfloat * )&normA );
-            glVertex3fv( ( const GLfloat * )&vertA );
+            gGLFT->glNormal3fv( ( const GLfloat * )&normA );
+            gGLFT->glVertex3fv( ( const GLfloat * )&vertA );
 
             const V3f &normB = normals[tri[1]];
-            glNormal3fv( ( const GLfloat * )&normB );
-            glVertex3fv( ( const GLfloat * )&vertB );
+            gGLFT->glNormal3fv( ( const GLfloat * )&normB );
+            gGLFT->glVertex3fv( ( const GLfloat * )&vertB );
 
             const V3f &normC = normals[tri[2]];
-            glNormal3fv( ( const GLfloat * )&normC );
-            glVertex3fv( ( const GLfloat * )&vertC );
+            gGLFT->glNormal3fv( ( const GLfloat * )&normC );
+            gGLFT->glVertex3fv( ( const GLfloat * )&vertC );
         }
         else
         {
@@ -461,21 +425,20 @@ void MeshDrwHelper::draw( const DrawContext & iCtx ) const
             if ( N.length() > 1.0e-4f )
             {
                 N.normalize();
-                glNormal3fv( ( const GLfloat * )&N );
+                gGLFT->glNormal3fv( ( const GLfloat * )&N );
             }
 
-            glVertex3fv( ( const GLfloat * )&vertA );
+            gGLFT->glVertex3fv( ( const GLfloat * )&vertA );
 
-            glVertex3fv( ( const GLfloat * )&vertB );
+            gGLFT->glVertex3fv( ( const GLfloat * )&vertB );
 
-            glVertex3fv( ( const GLfloat * )&vertC );
+            gGLFT->glVertex3fv( ( const GLfloat * )&vertC );
         }
 
     }
 
-    glEnd();
+    gGLFT->glEnd();
 
-#endif
 }
 
 //-*****************************************************************************

@@ -41,6 +41,8 @@
 //#include "GLCamera.h"
 #include "Drawable.h"
 
+#include <maya/MGLFunctionTable.h>
+
 #include <boost/shared_ptr.hpp>
 
 namespace SimpleAbcViewer {
@@ -92,6 +94,8 @@ public:
     //! ...
     Box3d getBounds() const { return m_bounds; }
 
+    void setGLFTable(MGLFunctionTable* table);
+
     //! This draws, assuming a camera matrix has already been set.
     //! ...
     void draw( SceneState &s_state );
@@ -105,6 +109,8 @@ protected:
     chrono_t m_minTime;
     chrono_t m_maxTime;
     Box3d m_bounds;
+
+	static MGLFunctionTable* g_GLFT;
 
     DrawablePtr m_drawable;
 };

@@ -45,8 +45,10 @@ Based upon animaAlembicHolder by Olli Rajala @ anima
 #include "SceneManager.h"
 #include "NodeIteratorVisitorHelper.h"
 
-#include <Alembic/AbcGeom/IPolyMesh.h>
-#include <Alembic/AbcGeom/ISubD.h>
+//#include "AlembicGeometry.h"
+
+#include <Alembic/AbcGeom/All.h>
+#include <Alembic/AbcCoreHDF5/All.h>
 
 #include <maya/MPxNode.h>
 #include <maya/MPxSurfaceShape.h>
@@ -82,6 +84,7 @@ Based upon animaAlembicHolder by Olli Rajala @ anima
 #include <set>
 
 #include <iostream>
+#include <vector>
 
 #include "GlShaderHolder.h"
 
@@ -90,12 +93,12 @@ class AlembicArchiveGeom
 {
 public:
   AlembicArchiveGeom();
-   MString dso;
-   MString data;
+   MString objectPath;
    MString filename;
    MString geomLoaded;
    std::string scenekey;
    int mode;
+   bool drawboundingBox;
    float frame;
    float frameOffset;
    bool useFrameExtension;
@@ -109,6 +112,8 @@ public:
    int dList;
    int updateView;
    int updateBBox;
+
+   //std::vector<*AlembicMeshGeometry> m_geometryList;
 
 };
 
@@ -173,6 +178,7 @@ public:
     
     static  MObject    aShowBB;
     static  MObject    aShowGL;
+    static  MObject    aMode;
     static  MObject    aFlipV;
 //    static  MObject     aShowFurBB;
     static  MObject    aPolyAsSubD;
@@ -207,11 +213,14 @@ public:
     
     MStatus archiveShadersAndAttribs() const;
 
+    MStatus GetPointsFromAbc();
+
     int archiveAttribs(	const MStringArray & shapeNames) const;
 
     int archiveShaders(	const MStringArray & shapeNames) const;
 
     MStringArray getObjects();
+    std::vector<MFloatArray> getUVs();
     MIntArray getUVShells();
     MIntArray getUDIMs();
 

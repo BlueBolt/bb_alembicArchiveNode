@@ -91,6 +91,8 @@ void setMaterials( float o, bool negMatrix = false )
 // SCENE CLASS
 //-*****************************************************************************
 
+MGLFunctionTable* Scene::g_GLFT = 0;
+
 //-*****************************************************************************
 Scene::Scene( const std::string &abcFileName, const std::string &objectPath )
   : m_fileName( abcFileName )
@@ -177,6 +179,8 @@ Scene::Scene( const std::string &abcFileName, const std::string &objectPath )
 
 }
 
+
+
 //-*****************************************************************************
 void Scene::setTime( chrono_t iSeconds )
 {
@@ -194,6 +198,11 @@ void Scene::setTime( chrono_t iSeconds )
     }
     
     m_bounds = m_drawable->getBounds();
+}
+
+void Scene::setGLFTable(MGLFunctionTable* table)
+{
+   g_GLFT = table;
 }
 
 //-*****************************************************************************
@@ -216,7 +225,7 @@ void Scene::draw( SceneState &s_state )
     DrawContext dctx;
     dctx.setWorldToCamera( currentMatrix );
     dctx.setPointSize( s_state.pointSize );
-    
+
     m_drawable->draw( dctx );
     
 //    glutSwapBuffers();

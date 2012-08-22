@@ -130,16 +130,19 @@ void IXformDrw::draw( const DrawContext & iCtx )
         IObjectDrw::draw( iCtx );
         return;
     }
+    static MGLFunctionTable *gGLFT = NULL;
+    if (gGLFT == NULL)
+       gGLFT = MHardwareRenderer::theRenderer()->glFunctionTable();
 
     // Get the current matrix.
     GLdouble currentMatrix[16];
-    glGetDoublev( GL_MODELVIEW_MATRIX, currentMatrix );
+    gGLFT->glGetDoublev( GL_MODELVIEW_MATRIX, currentMatrix );
 
     // Basically, we want to load our matrix into the thingy.
     // We don't use the OpenGL transform stack because we have
     // deep deep hierarchy that exhausts the max stack depth quickly.
-    glMatrixMode( GL_MODELVIEW );
-    glMultMatrixd( ( const GLdouble * )&m_localToParent[0][0] );
+    gGLFT->glMatrixMode( GL_MODELVIEW );
+    gGLFT->glMultMatrixd( ( const GLdouble * )&m_localToParent[0][0] );
 
     // Make a new context.
     M44d localToWorld = m_localToParent * iCtx.getLocalToWorld();
@@ -150,8 +153,8 @@ void IXformDrw::draw( const DrawContext & iCtx )
     IObjectDrw::draw( thisCtx );
 
     // And back out, restore the matrix.
-    glMatrixMode( GL_MODELVIEW );
-    glLoadMatrixd( currentMatrix );
+    gGLFT->glMatrixMode( GL_MODELVIEW );
+    gGLFT->glLoadMatrixd( currentMatrix );
 }
 
 } // End namespace SimpleAbcViewer

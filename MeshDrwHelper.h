@@ -40,6 +40,10 @@
 #include "Foundation.h"
 #include "DrawContext.h"
 
+#include <maya/MHardwareRenderer.h>
+#include <maya/MGLFunctionTable.h>
+#include <maya/MBoundingBox.h>
+
 namespace SimpleAbcViewer {
 
 //-*****************************************************************************
@@ -91,6 +95,8 @@ public:
 
 protected:
     void computeBounds();
+
+	static MGLFunctionTable* g_GLFT;
 
     typedef Imath::Vec3<unsigned int> Tri;
     typedef std::vector<Tri> TriArray;

@@ -125,6 +125,8 @@ MObject    bb_alembicArchiveShape::aFurLOD;
 MObject    bb_alembicArchiveShape::aShowBB;
 MObject    bb_alembicArchiveShape::aShowGL;
 
+MObject    bb_alembicArchiveShape::aMode;
+
 MObject    bb_alembicArchiveShape::aFlipV;
 MObject    bb_alembicArchiveShape::aPolyAsSubD;
 
@@ -233,15 +235,19 @@ void nodePreRemovalCallback( MObject& obj, void* data)
 
 AlembicArchiveGeom::AlembicArchiveGeom()
 {
-   dso  = "";
-   data = "";
+   filename  = "";
+   objectPath = "";
+   drawboundingBox = true;
    mode = 0;
+
    geomLoaded = "";
    scenekey = "";
+
    scale = 1.0f;
    BBmin = MPoint(-1.0f, -1.0f, -1.0f);
    BBmax = MPoint(1.0f, 1.0f, 1.0f);
    bbox = MBoundingBox(BBmin, BBmax);
+
    IsGeomLoaded = false;
    updateView = true;
    updateBBox = true;
@@ -592,14 +598,21 @@ MStringArray bb_alembicArchiveShape::getObjects()
 
 }
 
+std::vector<MFloatArray> bb_alembicArchiveShape::getUVs()
+{
+	std::vector<MFloatArray> f_uvs[2];
+
+
+
+}
 
 MIntArray bb_alembicArchiveShape::getUVShells()
 {
-	MIntArray uvShells;
+    MIntArray uvShells;
     MStatus st = MS::kSuccess;
 
 
-	double mTime = setHolderTime();
+    double mTime = setHolderTime();
 
     MFnDagNode fn( thisMObject() );
     MString abcfile;
@@ -629,8 +642,8 @@ MIntArray bb_alembicArchiveShape::getUVShells()
 
     if (numChildren == 0) return uvShells;
 
-	//list through the objects and retreve data based upon
-    //the object being a polymesh or subD
+    // list through the objects and retreve data based upon
+    // the object being a polymesh or subD
 
     outIObjList.clear();
 
@@ -681,7 +694,7 @@ MIntArray bb_alembicArchiveShape::getUVShells()
 				for (unsigned int s = 0; s < numUVs; s++)
 				{
 					uValues.append((*uvPtr)[s].x);
-					//vValues.append((*uvPtr)[s].y);
+					vValues.append((*uvPtr)[s].y);
 				}
 			}
 
@@ -1017,10 +1030,10 @@ MStatus bb_alembicArchiveShape::initialize()
     nAttr.setKeyable( true );
     st = addAttribute(aShowBB);er;
 
-    aShowGL = nAttr.create( "showGL", "sgl", MFnNumericData::kBoolean, 1, &st);
-    nAttr.setHidden(false);
-    nAttr.setKeyable( true );
-    st = addAttribute(aShowGL);er;
+//    aShowGL = nAttr.create( "showGL", "sgl", MFnNumericData::kBoolean, 1, &st);
+//    nAttr.setHidden(false);
+//    nAttr.setKeyable( true );
+//    st = addAttribute(aShowGL);er;
 
     aFlipV = nAttr.create( "flipV", "fv", MFnNumericData::kBoolean, 0, &st);
     nAttr.setHidden(false);
@@ -1048,6 +1061,18 @@ MStatus bb_alembicArchiveShape::initialize()
     eAttr.addField("smooth", 3) ;
     eAttr.setDefault(0) ;
     st = addAttribute(aSubDUVSmoothing);er;
+
+
+    aMode = eAttr.create( "glMode", "gl", 1 );
+    eAttr.setStorable(true);
+    eAttr.setKeyable(true);
+    eAttr.addField("Bounding Box", 0) ;
+    eAttr.addField("Wireframe", 1) ;
+    eAttr.addField("Smooth Shading", 2) ;
+    eAttr.addField("Smooth with Wireframe", 3) ;
+    eAttr.addField("Points", 4) ;
+    eAttr.setDefault(1) ;
+    st = addAttribute(aMode);er;
 
     aMakeInstance = nAttr.create( "makeInstance", "minst", MFnNumericData::kBoolean, 0, &st);
     nAttr.setHidden(false);
@@ -1141,8 +1166,92 @@ MStatus bb_alembicArchiveShape::initialize()
 
 }
 
+MStatus bb_alembicArchiveShape::GetPointsFromAbc()
+{
+
+  MStatus status;
+
+  bb_alembicArchiveShape* nonConstThis = const_cast<bb_alembicArchiveShape*> (this);
+  AlembicArchiveGeom* geom = nonConstThis->geometry();
+//
+//  vector<AtPoint> vertices;
+//  vector<AtUInt32> vidxs;
+//  vector<unsigned int> nsides;
+
+  MString abcfile = geom->filename;
+
+  MObject this_object = thisMObject();
+
+  MPlug plug(this_object, aTime);
+  plug.getValue(fGeometry.frame);
+
+  plug.setAttribute(aTimeOffset);
+  plug.getValue(fGeometry.frameOffset);
+
+  if (abcfile != "")
+  {
+		// test the file that we can read it
+
+		Alembic::Abc::IArchive archive = m_scene->getArchive();
+
+		// walk the abc file
+
+		Alembic::Abc::IObject start = archive.getTop();
+
+		walk(start);
+
+//		geom->m_geometryList.clear();
+
+		for (std::vector<Alembic::Abc::IObject>::iterator i = outIObjList.begin(); i != outIObjList.end(); i++)
+		{
+			//get the type for this object
+
+			Alembic::Abc::IObject this_object = *i;
+
+			//cout << "object :: " <<  this_object.getFullName() << endl;
+
+			// get the type of object and if it is compatible add it to the display list
+
+//			// first if this is a polymesh
+//            if (Alembic::AbcGeom::IPolyMesh::matches( this_object.getHeader() ))
+//            {
+//               geom->m_geometryList.push_back(new AlembicPolymeshGeometry(this_object, geom->bbox));
+//            }
+//            else if (Alembic::AbcGeom::ISubD::matches( this_object.getHeader() ))
+//            {
+//                geom->m_geometryList.push_back(new AlembicSubDGeometry(this_object, geom->bbox));
+//            }
+//            else if (Alembic::AbcGeom::IXform::matches( this_object.getHeader() ))
+//            {
+//
+//            }
+
+		}
+
+  }
+
+}
+
 AlembicArchiveGeom* bb_alembicArchiveShape::geometry()
 {
+
+  int tmpMode = fGeometry.mode;
+
+
+  MObject this_object = thisMObject();
+  MPlug plug(this_object,aAbcFile);
+  plug.getValue(fGeometry.filename);
+
+  plug.setAttribute(aMode);
+  plug.getValue(fGeometry.mode);
+
+
+  // if the mode is not bounding box populate the geometry infomation
+
+//  if (fGeometry.mode != 0 || !LoadBoundingBox())
+//  {
+//     GetPointsFromAbc();
+//  }
 
   return &fGeometry;
 
@@ -1322,37 +1431,12 @@ void bb_alembicArchiveShapeUI::drawABox(const MVector &bmin, const MVector &bmax
      gGLFT = MHardwareRenderer::theRenderer()->glFunctionTable();
 
   if (poly){
-/*
-                GLfloat vertices[] = {float(bmax.x),float(bmax.y),float(bmax.z), float(bmin.x),float(bmax.y),float(bmax.z), float(bmin.x),float(bmin.y),float(bmax.z),float(bmin.x),float(bmax.y),float(bmin.z),
-                        float(bmax.x), float(bmax.y), float(bmin.z), float(bmin.x), float(bmax.y), float(bmin.z), float(bmin.x), float(bmin.y), float(bmin.z), float(bmax.x), float(bmin.y), float(bmin.z),
-                        float(bmax.x), float(bmax.y), float(bmax.z), float(bmax.x), float(bmin.y), float(bmax.z), float(bmax.x), float(bmin.y), float(bmin.z), float(bmax.x), float(bmax.y), float(bmin.z),
-                        float(bmin.x), float(bmin.y), float(bmax.z), float(bmin.x), float(bmin.y), float(bmin.z), float(bmax.x), float(bmin.y), float(bmin.z), float(bmax.x), float(bmin.y), float(bmax.z),
-                        float(bmin.x), float(bmax.y), float(bmax.z), float(bmax.x), float(bmax.y), float(bmax.z), float(bmax.x), float(bmax.y), float(bmin.z), float(bmin.x), float(bmax.y), float(bmin.z),
-                        float(bmin.x), float(bmax.y), float(bmin.z), float(bmin.x), float(bmin.y), float(bmin.z), float(bmin.x), float(bmin.y), float(bmax.z), float(bmin.x), float(bmax.y), float(bmax.z)};
-
-                GLfloat colors[] = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
-                                                                   1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0,
-                                                                   1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0,
-                                                                   0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0,
-                                                                   1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0,
-                                                                   0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0};
-
-                GLfloat normals[] = {0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0,
-                                                                        0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0,
-                                                                        1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0,
-                                                                        0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0,
-                                                                        0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0,
-                                                                        -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0};
-*/
       gGLFT->glBegin(GL_QUADS);
       gGLFT->glShadeModel( GL_FLAT );
 
     } else {
         gGLFT->glBegin( MGL_LINE_STRIP );
     }
-    //glEnable(GL_CULL_FACE);
-    //glCullFace(GL_BACK);
-
   float topLeftFront[3] = { float(bmin.x),float(bmax.y),float(bmax.z) };
   float topRightFront[3] = { float(bmax.x),float(bmax.y),float(bmax.z) };
   float topLeftBack[3] = { float(bmin.x),float(bmax.y),float(bmin.z) };
@@ -1364,19 +1448,13 @@ void bb_alembicArchiveShapeUI::drawABox(const MVector &bmin, const MVector &bmax
   float bottomRightBack[3] = { float(bmax.x),float(bmin.y),float(bmin.z) };
 
                 ////////////////// BASE
-/*
-  gGLFT->glVertex3f(float(bmax.x),float(bmin.y),float(bmin.z));
-  gGLFT->glVertex3f(float(bmax.x),float(bmin.y),float(bmax.z));
-  gGLFT->glVertex3f(float(bmin.x),float(bmin.y),float(bmax.z));
-  gGLFT->glVertex3f(float(bmin.x),float(bmin.y),float(bmin.z));
-*/
   gGLFT->glNormal3f(0, -1, 0);
   gGLFT->glVertex3fv(bottomLeftFront);
   gGLFT->glVertex3fv(bottomLeftBack);
   gGLFT->glVertex3fv(bottomRightBack);
   gGLFT->glVertex3fv(bottomRightFront);
 
-                /////////////////// FRONT -- correct
+                /////////////////// FRONT
 
   gGLFT->glNormal3f(0, 0, 1);
   gGLFT->glVertex3fv(bottomLeftFront);
@@ -1384,26 +1462,12 @@ void bb_alembicArchiveShapeUI::drawABox(const MVector &bmin, const MVector &bmax
   gGLFT->glVertex3fv(topRightFront);
   gGLFT->glVertex3fv(bottomRightFront);
 
-  /*
-  gGLFT->glVertex3f(float(bmax.x),float(bmin.y),float(bmax.z));
-  gGLFT->glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
-  gGLFT->glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
-  gGLFT->glVertex3f(float(bmin.x),float(bmin.y),float(bmax.z));
-  */
               /////////////////// RIGHT
 
 gGLFT->glNormal3f(-1, 0, 0);
 gGLFT->glVertex3fv(bottomRightBack);
 gGLFT->glVertex3fv(topRightBack);
 gGLFT->glVertex3fv(topRightFront);
-
-//gGLFT->glVertex3fv(topLeftFront);
-/*
-gGLFT->glVertex3f(float(bmax.x),float(bmin.y),float(bmax.z));
-gGLFT->glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
-gGLFT->glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
-gGLFT->glVertex3f(float(bmax.x),float(bmin.y),float(bmin.z));
-*/
 
 
                 ////////////////// TOP
@@ -1413,12 +1477,6 @@ gGLFT->glVertex3f(float(bmax.x),float(bmin.y),float(bmin.z));
   gGLFT->glVertex3fv(topLeftBack);
   gGLFT->glVertex3fv(topLeftFront);
 
-/*
-  gGLFT->glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
-  gGLFT->glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
-  gGLFT->glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
-  gGLFT->glVertex3f(float(bmax.x),float(bmax.y),float(bmax.z));
-*/
                 /////////////////// LEFT
 
   gGLFT->glNormal3f(-1, 0, 0);
@@ -1426,27 +1484,12 @@ gGLFT->glVertex3f(float(bmax.x),float(bmin.y),float(bmin.z));
   gGLFT->glVertex3fv(bottomLeftBack);
   gGLFT->glVertex3fv(topLeftBack);
 
-/*
-  gGLFT->glVertex3f(float(bmin.x),float(bmin.y),float(bmax.z));
-  gGLFT->glVertex3f(float(bmin.x),float(bmax.y),float(bmax.z));
-  gGLFT->glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
-  gGLFT->glVertex3f(float(bmin.x),float(bmin.y),float(bmin.z));
-*/
                 /////////////////// BACK -- correct
 
   gGLFT->glNormal3f(0, 1, 0);
   gGLFT->glVertex3fv(topRightBack);
   gGLFT->glVertex3fv(bottomRightBack);
   gGLFT->glVertex3fv(bottomLeftBack);
-
-/*
-  gGLFT->glNormal3f(0, 0, 1);
-  gGLFT->glVertex3f(float(bmax.x),float(bmin.y),float(bmin.z));
-  gGLFT->glVertex3f(float(bmax.x),float(bmax.y),float(bmin.z));
-  gGLFT->glVertex3f(float(bmin.x),float(bmax.y),float(bmin.z));
-  gGLFT->glVertex3f(float(bmin.x),float(bmin.y),float(bmin.z));
-*/
-
 
   gGLFT->glEnd();
 
@@ -1536,6 +1579,8 @@ void bb_alembicArchiveShapeUI::draw( const MDrawRequest & request, M3dView & vie
     if (gGLFT == NULL)
        gGLFT = MHardwareRenderer::theRenderer()->glFunctionTable();
 
+    int dList = gGLFT->glGenLists(2);
+
     MDrawData data = request.drawData();
 
     bb_alembicArchiveShape* archiveShape =  (bb_alembicArchiveShape*)surfaceShape();
@@ -1550,77 +1595,67 @@ void bb_alembicArchiveShapeUI::draw( const MDrawRequest & request, M3dView & vie
 
     view.beginGL();
 
-//    std::cout << "bb_alembicArchiveShapeUI::draw" << std::endl;
-      // Calculate scaled BBox dimensions
- /*     float halfSize[3] =
-      {0.5f*(bmax[0] - bmin[0]), 0.5f*(bmax[1] - bmin[1]), 0.5f*(bmax[2] - bmin[2])};
-      float center[3] =
-      {0.5f*(bmax[0] + bmin[0]), 0.5f*(bmax[1] + bmin[1]), 0.5f*(bmax[2] + bmin[2])};
-      float sbottomLeftFront[3] =
-      {-halfSize[0]*geom->scale + center[0], -halfSize[1]*geom->scale + center[1], -halfSize[2]*geom->scale + center[2]};
-      float stopLeftFront[3] =
-      {-halfSize[0]*geom->scale + center[0],  halfSize[1]*geom->scale + center[1], -halfSize[2]*geom->scale + center[2]};
-      float sbottomRightFront[3] =
-      { halfSize[0]*geom->scale + center[0], -halfSize[1]*geom->scale + center[1], -halfSize[2]*geom->scale + center[2]};
-      float stopRightFront[3] =
-      { halfSize[0]*geom->scale + center[0],  halfSize[1]*geom->scale + center[1], -halfSize[2]*geom->scale + center[2]};
-      float sbottomLeftBack[3] =
-      {-halfSize[0]*geom->scale + center[0], -halfSize[1]*geom->scale + center[1],  halfSize[2]*geom->scale + center[2]};
-      float stopLeftBack[3] =
-      {-halfSize[0]*geom->scale + center[0],  halfSize[1]*geom->scale + center[1],  halfSize[2]*geom->scale + center[2]};
-      float sbottomRightBack[3] =
-      { halfSize[0]*geom->scale + center[0], -halfSize[1]*geom->scale + center[1],  halfSize[2]*geom->scale + center[2]};
-      float stopRightBack[3] =
-      { halfSize[0]*geom->scale + center[0],  halfSize[1]*geom->scale + center[1],  halfSize[2]*geom->scale + center[2]};
+    std::cout << "bb_alembicArchiveShapeUI::draw -> mode:" << request.token() << std::endl;
 
-      gGLFT->glNewList(geom->dList+1, MGL_COMPILE);
-      gGLFT->glBegin(MGL_LINE_STRIP);
-      gGLFT->glVertex3fv(sbottomLeftFront);
-      gGLFT->glVertex3fv(sbottomLeftBack);
-      gGLFT->glVertex3fv(stopLeftBack);
-      gGLFT->glVertex3fv(stopLeftFront);
-      gGLFT->glVertex3fv(sbottomLeftFront);
-      gGLFT->glVertex3fv(sbottomRightFront);
-      gGLFT->glVertex3fv(sbottomRightBack);
-      gGLFT->glVertex3fv(stopRightBack);
-      gGLFT->glVertex3fv(stopRightFront);
-      gGLFT->glVertex3fv(sbottomRightFront);
-      gGLFT->glEnd();
 
-      gGLFT->glBegin(MGL_LINES);
-      gGLFT->glVertex3fv(sbottomLeftBack);
-      gGLFT->glVertex3fv(sbottomRightBack);
+    //archiveShape->setHolderTime();
 
-      gGLFT->glVertex3fv(stopLeftBack);
-      gGLFT->glVertex3fv(stopRightBack);
-
-      gGLFT->glVertex3fv(stopLeftFront);
-      gGLFT->glVertex3fv(stopRightFront);
-      gGLFT->glEnd();
-      gGLFT->glEndList();
-*/
-
+    // draw the bounding box
     drawABox(bmin, bmax,false);
-
 
     // init gl shaders - DISABLED FOR NOW - not even sure if we can do this here
     // glshader.init((char *)vshader, (char *)fshader);
-/*
-    if (request.token() == kDrawWireframe){
 
-        gGLFT->glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 
-    } else {
-        gGLFT->glShadeModel( GL_SMOOTH );
-        gGLFT->glEnable(GL_LIGHTING);
-        gGLFT->glEnable(GL_COLOR_MATERIAL);
-        gGLFT->glEnable (GL_BLEND);
-        gGLFT->glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    }
 
-*/
+//        gGLFT->glEnable (GL_BLEND);
+//        gGLFT->glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+
+
     // Now for the geo ....
 
+    // get the mode for the draw
+
+    int gl_mode=1;
+
+    //MPlug glPlug(archiveShape->aShowGL);
+    //bool doGL = glPlug.asBool() ;
+
+    // draw the "scene" from the alembic file
+
+
+
+/*
+    bool proxy = false;
+
+    MPlug plug =  fn.findPlug( aShowProxy );
+    plug.getValue( proxy );
+*/
+
+    gGLFT->glNewList(dList, MGL_COMPILE);
+//	gGLFT->glShadeModel( MGL_SMOOTH );
+    gGLFT->glPushAttrib(MGL_ALL_ATTRIB_BITS);
+//	gGLFT->glPushAttrib(MGL_CURRENT_BIT);
+	gGLFT->glEnable(MGL_POLYGON_OFFSET_FILL);
+	gGLFT->glEnable(MGL_LIGHTING);
+//	gGLFT->glEnable(MGL_COLOR_MATERIAL);
+
+	gGLFT->glColor4f(0.5f, 0.5f, 0.5f, 1.0f);
+
+    std::string sceneKey = archiveShape->getSceneKey(false);
+    if (archiveShape->abcSceneManager.hasKey(sceneKey) && gl_mode == 1 ){
+    	SimpleAbcViewer::ScenePtr this_scene = archiveShape->abcSceneManager.getScene(sceneKey);
+    	this_scene->setGLFTable(gGLFT);
+    	this_scene->draw(archiveShape->abcSceneState);
+    }
+
+    gGLFT->glEnd();
+    gGLFT->glPopAttrib();
+
+    gGLFT->glEndList();
+
+    gGLFT->glCallList(dList);
 
     view.endGL();
 
@@ -1687,29 +1722,6 @@ void bb_alembicArchiveShapeUI::draw( const MDrawRequest & request, M3dView & vie
     //MFnDagNode fn( thisNode );
 
 
-
-    //MPlug glPlug(archiveShape->aShowGL);
-    //bool doGL = glPlug.asBool() ;
-
-    // draw the "scene" from the alembic file
-/*
-    bool proxy = false;
-
-    MPlug plug =  fn.findPlug( aShowProxy );
-    plug.getValue( proxy );
-
-    std::string sceneKey = getSceneKey(proxy);
-    if (abcSceneManager.hasKey(sceneKey) && doGL){
-        abcSceneManager.getScene(sceneKey)->draw(abcSceneState);
-    }
-    else if (abcSceneManager.hasKey(sceneKey) && !doGL){
-        drawABox(bmin, bmax,true);
-    }
-
-
-
-
-*/
 
 }
 
