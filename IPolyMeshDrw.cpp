@@ -91,71 +91,48 @@ bool IPolyMeshDrw::valid()
 //-*****************************************************************************
 void IPolyMeshDrw::setTime( chrono_t iSeconds )
 {
-    // Use nearest for now.
-    ISampleSelector ss( iSeconds, ISampleSelector::kNearIndex );
-    if ( !IsAncestorInvisible(m_polyMesh,ss) ) {
-        m_visible = false;
+    IObjectDrw::setTime( iSeconds );
+    if ( !valid() )
+    {
+        m_drwHelper.makeInvalid();
         return;
     }
-    else
-        m_visible = true;
 
-    if (iSeconds != m_currentTime) {
+    // Use nearest for now.
+    ISampleSelector ss( iSeconds, ISampleSelector::kNearIndex );
+    IPolyMeshSchema::Sample psamp;
 
-        IObjectDrw::setTime( iSeconds );
-        if ( !valid() )
-        {
-            m_drwHelper.makeInvalid();
-            return;
-        }
+    if ( m_polyMesh.getSchema().isConstant() )
+    {
+        psamp = m_samp;
+    }
+    else if ( m_polyMesh.getSchema().getNumSamples() > 0 )
+    {
+        m_polyMesh.getSchema().get( psamp, ss );
+    }
 
-        IPolyMeshSchema::Sample psamp;
+    // Get the stuff.
+    P3fArraySamplePtr P = psamp.getPositions();
+    Int32ArraySamplePtr indices = psamp.getFaceIndices();
+    Int32ArraySamplePtr counts = psamp.getFaceCounts();
 
-        if ( m_polyMesh.getSchema().isConstant() )
-        {
-            psamp = m_samp;
-        }
-        else if ( m_polyMesh.getSchema().getNumSamples() > 0 )
-        {
-            m_polyMesh.getSchema().get( psamp, ss );
-        }
+    Box3d bounds;
+    bounds.makeEmpty();
 
-        // Get the stuff.
-        P3fArraySamplePtr P = psamp.getPositions();
-        Int32ArraySamplePtr indices = psamp.getFaceIndices();
-        Int32ArraySamplePtr counts = psamp.getFaceCounts();
+    if ( m_boundsProp && m_boundsProp.getNumSamples() > 0 )
+    {
+        bounds = m_boundsProp.getValue( ss );
+    }
 
-        Box3d bounds;
-        bounds.makeEmpty();
+    // Update the mesh hoo-ha.
+    m_drwHelper.update( P, V3fArraySamplePtr(),
+                        indices, counts, bounds );
 
-        if ( m_boundsProp && m_boundsProp.getNumSamples() > 0 )
-        {
-            bounds = m_boundsProp.getValue( ss );
-        }
-
-        // Update the mesh hoo-ha.
-        m_drwHelper.update( P, V3fArraySamplePtr(),
-                            indices, counts, bounds );
-
-        // update vtxColors and shit
-        ICompoundProperty arbs = m_polyMesh.getSchema().getArbGeomParams();
-        if (arbs.valid())
-            m_drwHelper.updateArbs( arbs, indices, counts );
-
-
-        if ( !m_drwHelper.valid() )
-        {
-            m_polyMesh.reset();
-            return;
-        }
-
-        // The Object update computed child bounds.
-        // Extend them by this.
-        if ( !m_drwHelper.getBounds().isEmpty() )
-        {
-            m_bounds.extendBy( m_drwHelper.getBounds() );
-        }
-
+    // The Object update computed child bounds.
+    // Extend them by this.
+    if ( !m_drwHelper.getBounds().isEmpty() )
+    {
+        m_bounds.extendBy( m_drwHelper.getBounds() );
     }
 }
 

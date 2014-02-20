@@ -139,7 +139,7 @@ MObject    bb_alembicArchiveShape::aExportFaceIds;
 SimpleAbcViewer::SceneState bb_alembicArchiveShape::abcSceneState;
 SimpleAbcViewer::SceneManager bb_alembicArchiveShape::abcSceneManager;
 
-GlShaderHolder bb_alembicArchiveShape::glshader;
+// GlShaderHolder bb_alembicArchiveShape::glshader;
 
 char vshader[] = { 
 #include "glsl/abc.vert.xxd"
@@ -169,11 +169,11 @@ void updateAbc(const void* data)
 
     //struct stat buffer ;
 
+    Alembic::AbcCoreFactory::IFactory factory;
+    factory.setPolicy(Alembic::Abc::ErrorHandler::kQuietNoopPolicy);
 
     // no caching!
-    Alembic::Abc::IArchive archive(Alembic::AbcCoreHDF5::ReadArchive(),
-        fileName.asChar(), Alembic::Abc::ErrorHandler::Policy(),
-        Alembic::AbcCoreAbstract::ReadArraySampleCachePtr());
+    Alembic::Abc::IArchive archive( factory.getArchive(fileName.asChar()) );
 
     if (!archive.valid())
     {
@@ -316,23 +316,24 @@ MBoundingBox bb_alembicArchiveShape::boundingBox() const
     // update scene if needed
     if (m_abcdirty) updateAbc(this);
 
-    MBoundingBox bbox;
+    MBoundingBox bboxRet;
 
     std::string sceneKey = getSceneKey(false);
     if (abcSceneManager.hasKey(sceneKey)) {
+
         SimpleAbcViewer::Box3d bb;
-        if (m_bbmode) {
-            setHolderTime(true); // first check bb at shutterClose
-            bb = abcSceneManager.getScene(sceneKey)->getBounds();
-            bbox.expand( MPoint( bb.min.x, bb.min.y, bb.min.z ) );
-            bbox.expand( MPoint( bb.max.x, bb.max.y, bb.max.z ) );
-        }
-        setHolderTime(); // ...then at shutterOpen
+        // if (m_bbmode) {
+        //     setHolderTime(true); // first check bb at shutterClose
+        //     bb = abcSceneManager.getScene(sceneKey)->getBounds();
+        //     bbox.expand( MPoint( bb.min.x, bb.min.y, bb.min.z ) );
+        //     bbox.expand( MPoint( bb.max.x, bb.max.y, bb.max.z ) );
+        // }
+        // setHolderTime(); // ...then at shutterOpen
         bb = m_scene->getBounds();
-        bbox.expand( MPoint( bb.min.x, bb.min.y, bb.min.z ) );
-        bbox.expand( MPoint( bb.max.x, bb.max.y, bb.max.z ) );
+        MBoundingBox bbox = MBoundingBox( MPoint( bb.min.x, bb.min.y, bb.min.z ) , MPoint( bb.max.x, bb.max.y, bb.max.z ));        
+        bboxRet.expand( bbox );
     }
-    return bbox;
+    return bboxRet;
 }
 
 
@@ -1175,7 +1176,7 @@ MStatus bb_alembicArchiveShape::GetPointsFromAbc()
   AlembicArchiveGeom* geom = nonConstThis->geometry();
 //
 //  vector<AtPoint> vertices;
-//  vector<AtUInt32> vidxs;
+//  vector<unsigned int32> vidxs;
 //  vector<unsigned int> nsides;
 
   MString abcfile = geom->filename;
@@ -1281,122 +1282,7 @@ std::string bb_alembicArchiveShape::getSceneKey(bool proxy) const
 
 MStatus bb_alembicArchiveShape::emitCache(float relativeFrame)  {
 
-	//if (!hasCache()) return MS::kUnknownParameter;
-
-	MStatus st;
-
-	MObject thisNode = thisMObject();
-	MString thisNodeName = MFnDependencyNode(thisNode).name();
-////////////////get Object Path////////////////////
-
-	MPlug objPathPlug( thisNode, aObjectPath );
-	MString objPath;
-	objPathPlug.getValue( objPath );
-
-	////////////////////////////////////
-
-	MPlug abcFilePlug( thisNode, aAbcFile );
-	MString abcFile;
-	abcFilePlug.getValue( abcFile );
-
-	///////////// Get Flip UV ///////////////////////
-
-	MPlug flipVPlug( thisNode, aFlipV );
-	bool flipV;
-	flipVPlug.getValue( flipV );
-
-	///////////// Get time with offset ///////////////////////
-
-	MPlug timePlug( thisNode, aTime );
-	MTime time;
-	timePlug.getValue( time );
-	//cerr << "time :: " <<  time << endl;
-
-	MPlug timeOffsetPlug( thisNode, aTimeOffset );
-	MTime timeOffset;
-	timeOffsetPlug.getValue( timeOffset );
-	//cerr << "timeOffset :: " <<  timeOffset << endl;
-
-	//float o_time=time+timeOffset;
-	float o_time=time.as(MTime::kFilm)+timeOffset.as(MTime::kFilm);
-	//float o_time=relativeFrame+timeOffset.as(MTime::kFilm);
-	//cerr << "o_time :: " <<  o_time << endl;
-
-
-
-	///////////// Get polyAsSubD ///////////////////////
-
-	MPlug subDPlug( thisNode, aPolyAsSubD );
-	bool subD;
-	subDPlug.getValue( subD );
-
-	///////////// Get shutterOpen ///////////////////////
-
-	MPlug shutterOpenPlug( thisNode, aShutterOpen );
-	float shutterOpen;
-	shutterOpenPlug.getValue( shutterOpen );
-
-	///////////// Get shutterClose ///////////////////////
-
-	MPlug shutterClosePlug( thisNode, aShutterClose );
-	float shutterClose;
-	shutterClosePlug.getValue( shutterClose );
-
-////////////////get Bound////////////////////
-//	MPlug BBPlug( thisNode, aBB );
-//	MVector bmin,bmax;
-//	st= bbValue(BBPlug, bmin, bmax) ;
-	m_bbmode = 1;
-	MBoundingBox bb = boundingBox();
-
-	//MPlug geoBBPlug( thisNode, aBB );
-	MVector bmin,bmax;
-	bmin=bb.min();
-	bmax=bb.max();
-
-	MFloatVector bminf(bmin);
-	MFloatVector bmaxf(bmax);
-	RtBound bound = { bminf.x, bmaxf.x, bminf.y, bmaxf.y, bminf.z, bmaxf.z } ;
-
-	m_bbmode = 0;
-////////////////////////////////////
-
-	RtString * progData = new RtString[2];
-
-	MString argsString;
-	if (objPath != ""){
-		argsString += "-objectpath ";
-		argsString += objPath;
-	}
-	if (flipV){
-		argsString += " -flipv ";
-	}
-	if (subD){
-		argsString += " -subd ";
-	}
-	if (shutterOpen != 0.0){
-		argsString += " -shutteropen ";
-		argsString += shutterOpen;
-	}
-	if (shutterClose != 0.0){
-		argsString += " -shutterclose ";
-		argsString += shutterClose;
-	}
-	argsString += " -filename ";
-	argsString += abcFile;
-	argsString += " -frame ";
-	argsString += o_time;
-
- 	//cerr << "argsString :: " <<  argsString << endl;
-
-	//st = createProgramStrings(geomPlug,progStrings, detailRanges, lodSetNames, blurSamples, relativeFrame) ;
-	progData[0] = "AlembicRiProcedural";
-	progData[1] = argsString.asChar();
-
-	RiAttributeBegin();
-	RiProcedural(progData,bound,RiProcDynamicLoad,RiProcFree);
-	RiAttributeEnd();
-
+    // temporayorly removed renderman reliance
 
 	return MS::kSuccess;
 
@@ -1570,6 +1456,7 @@ void bb_alembicArchiveShapeUI::getDrawRequestsWireFrame(MDrawRequest& request, c
    }
 
 }
+
 void bb_alembicArchiveShapeUI::draw( const MDrawRequest & request, M3dView & view ) const
 {
     MStatus st;
@@ -1601,7 +1488,10 @@ void bb_alembicArchiveShapeUI::draw( const MDrawRequest & request, M3dView & vie
     //archiveShape->setHolderTime();
 
     // draw the bounding box
-    drawABox(bmin, bmax,false);
+    std::cout << "bb_alembicArchiveShapeUI::draw -> bmin:" << bmin << "bmax:" << bmax << std::endl;
+//[-1.79769e+308, -1.79769e+308, -1.79769e+308]bmax:[1.79769e+308, 1.79769e+308, 1.79769e+308]
+
+    drawABox(bmin,bmax,false);
 
     // init gl shaders - DISABLED FOR NOW - not even sure if we can do this here
     // glshader.init((char *)vshader, (char *)fshader);

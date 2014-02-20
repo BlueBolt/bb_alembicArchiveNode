@@ -34,7 +34,7 @@ File:pluginMain.cpp
 
 
 #include "bb_alembicArchiveShape.h"
-#include "delightCacheAlembic.h"
+// #include "delightCacheAlembic.h"
 
 #include "errorMacros.h"
 
@@ -54,7 +54,7 @@ MStatus initializePlugin( MObject obj )
         return st;
     }
 
-    st = plugin.registerCommand( "delightCacheAlembic",delightCacheAlembic::creator ,delightCacheAlembic::newSyntax);
+    // st = plugin.registerCommand( "delightCacheAlembic",delightCacheAlembic::creator ,delightCacheAlembic::newSyntax);
 
     MString info = bb_alembicArchiveShape::name;
         info += " v";
@@ -78,7 +78,7 @@ MStatus uninitializePlugin( MObject obj)
         return st;
     }
 
-	st = plugin.deregisterCommand( "delightCacheAlembic" );er;
+	// st = plugin.deregisterCommand( "delightCacheAlembic" );er;
 
     return st;
 }

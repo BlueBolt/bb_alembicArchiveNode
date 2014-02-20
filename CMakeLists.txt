@@ -44,7 +44,6 @@ SET( H_FILES
 	PathUtil.h
 	timer.h
 	Drawable.h
-	GlShaderHolder.h
 	IXformDrw.h
 	Scene.h
 	Transport.h
@@ -52,7 +51,6 @@ SET( H_FILES
 	IObjectDrw.h
 	MeshDrwHelper.h
 	SceneManager.h
-	delightCacheAlembic.h
 	CameraHelper.h
 	CreateSceneHelper.h
 	LocatorHelper.h
@@ -67,7 +65,6 @@ SET( H_FILES
 
 SET( CXX_FILES
 	bb_alembicArchiveShape.cpp
-	GlShaderHolder.cpp
 	IObjectDrw.cpp
 	IPolyMeshDrw.cpp
 	ISubDDrw.cpp
@@ -77,7 +74,6 @@ SET( CXX_FILES
 	pluginMain.cpp
 	Scene.cpp
 	Transport.cpp
-	delightCacheAlembic.cpp
 	BB_AlembicArchiveTranslator.cpp
 	CameraHelper.cpp
 	CreateSceneHelper.cpp

@@ -85,6 +85,11 @@ public:
     // input attributes
     static MObject mTimeAttr;
     static MObject mAbcFileNameAttr;
+    static MObject mSpeedAttr;
+    static MObject mOffsetAttr;
+    static MObject mCycleTypeAttr;
+    static MObject mIncludeFilterAttr;
+    static MObject mExcludeFilterAttr;
 
     // output attributes
     static MObject mOutPropArrayAttr;
@@ -114,8 +119,34 @@ public:
     static MStatus initialize();
 
     void   setDebugMode(bool iDebugOn){ mDebugOn = iDebugOn; }
+    void   setIncludeFilterString(const MString & iIncludeFilterString)
+    {
+        mIncludeFilterString = iIncludeFilterString;
+    }
+    void   setExcludeFilterString(const MString & iExcludeFilterString)
+    {
+        mExcludeFilterString = iExcludeFilterString;
+    }
 
 private:
+    // compute the adjusted time from inputTime, speed and time offset.
+    double computeAdjustedTime(const double inputTime,
+                               const double speed,
+                               const double timeOffset);
+
+    // retime based on the playstyle: hold(use current time), loop and bound
+    enum
+    {
+        PLAYTYPE_HOLD = 0,
+        PLAYTYPE_LOOP,
+        PLAYTYPE_REVERSE,
+        PLAYTYPE_BOUNCE
+    };
+    double computeRetime(const double inputTime,
+                         const double firstTime,
+                         const double lastTime,
+                         const short playStyle);
+    double getFPS();
 
     // flag indicating if the input file should be opened again
     bool    mFileInitialized;
@@ -140,6 +171,8 @@ private:
     bool    mCreateIfNotFound;
     bool    mRemoveIfNoUpdate;
     MString mConnectRootNodes;
+    MString mIncludeFilterString;
+    MString mExcludeFilterString;
 
     WriterData mData;
 };

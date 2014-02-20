@@ -3,6 +3,9 @@
 
 #include "Foundation.h"
 #include "Drawable.h"
+
+// #include <AbcOpenGL/All.h>
+
 #include <map>
 #include <utility>
 #include <string>
@@ -11,9 +14,9 @@
 
 #include <boost/shared_ptr.hpp>
 
-namespace SimpleAbcViewer {
+namespace SimpleAbcViewer {    
 
-typedef std::pair<SimpleAbcViewer::ScenePtr, unsigned int> CountedScene;
+typedef std::pair<ScenePtr, unsigned int> CountedScene;
 
 class SceneManager
 {
@@ -27,7 +30,7 @@ class SceneManager
                 file.close();
 
                 std::string key = abcFile+"/"+objectPath;
-    //            std::cout << "addScene: " << key << std::endl;
+               std::cout << "addScene: " << key << std::endl;
                 try {
                     if (m_scenes.count(key)) {
                         m_scenes[key].second++;

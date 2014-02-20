@@ -1,6 +1,6 @@
 //-*****************************************************************************
 //
-// Copyright (c) 2009-2011,
+// Copyright (c) 2009-2012,
 //  Sony Pictures Imageworks, Inc. and
 //  Industrial Light & Magic, a division of Lucasfilm Entertainment Company Ltd.
 //
@@ -45,9 +45,62 @@
 #include <maya/MItDag.h>
 #include <maya/MSelectionList.h>
 #include <maya/MStringArray.h>
+#include <maya/MObjectArray.h>
 #include <maya/MTime.h>
+#include <maya/MItDependencyGraph.h>
 
 #include <algorithm>
+
+MObject createShadingGroup(const MString& iName)
+{
+    MStatus status;
+
+    MFnSet fnSet;
+    MSelectionList selList;
+    MObject shadingGroup = fnSet.create(selList,
+                                        MFnSet::kRenderableOnly,
+                                        &status);
+    if (status != MS::kSuccess)
+    {
+        MString theError("Could not create shading engine: ");
+        theError += iName;
+        MGlobal::displayError(theError);
+
+        return shadingGroup;
+    }
+
+    fnSet.setName(iName);
+
+    return shadingGroup;
+}
+
+MObjectArray getOutConnectedSG( const MDagPath &shapeDPath )
+{
+    MStatus status;
+
+    // Array of connected Shaging Engines
+    MObjectArray connSG;
+
+    // Iterator through the dependency graph to find if there are 
+    // shading engines connected
+    MObject obj(shapeDPath.node()); // non const MObject
+    MItDependencyGraph itDG( obj, MFn::kShadingEngine, 
+                             MItDependencyGraph::kDownstream, 
+                             MItDependencyGraph::kBreadthFirst, 
+                             MItDependencyGraph::kNodeLevel, &status );
+
+    if( status == MS::kFailure )
+        return connSG;    
+
+    // we want to prune the iteration if the node is not a shading engine 
+    itDG.enablePruningOnFilter();
+
+    // iterate through the output connected shading engines
+    for( ; itDG.isDone()!= true; itDG.next() )
+        connSG.append( itDG.thisNode() );
+
+    return connSG;
+}
 
 MStatus replaceDagObject(MObject & oldObject, MObject & newObject,
             const MString & name)
@@ -123,11 +176,19 @@ void disconnectProps(MFnDependencyNode & iNode,
         }
 
         // disconnect connections to animated props
-        MPlug dstPlug = iNode.findPlug(propName.c_str());
+        MPlug dstPlug;
+        if (propName == Alembic::AbcGeom::kVisibilityPropertyName)
+        {
+            dstPlug = iNode.findPlug("visibility");
+        }
+        else
+        {
+            dstPlug = iNode.findPlug(propName.c_str());
+        }
 
         // make sure the long name matches
-        if (dstPlug.partialName(false, false, false, false, false, true) ==
-            propName.c_str())
+        if (propName == Alembic::AbcGeom::kVisibilityPropertyName ||
+            dstPlug.partialName(false, false, false, false, false, true) == propName.c_str())
         {
             disconnectAllPlugsTo(dstPlug);
         }
@@ -359,17 +420,26 @@ double getWeightAndIndex(double iFrame,
 
     oCeilIndex = ceilIndex.first;
 
-    return (iFrame - floorIndex.second) /
+    double alpha = (iFrame - floorIndex.second) /
         (ceilIndex.second - floorIndex.second);
+
+    // we so closely match the ceiling so we'll just use it
+    if (fabs(1.0 - alpha) < 0.0001)
+    {
+        oIndex = oCeilIndex;
+        return 0.0;
+    }
+
+    return alpha;
 }
 
-bool isColorSet(const Alembic::AbcCoreAbstract::MetaData & iMetaData,
+bool isColorSet(const Alembic::AbcCoreAbstract::PropertyHeader & iHeader,
     bool iUnmarkedFaceVaryingColors)
 {
-    return (Alembic::AbcGeom::IC3fGeomParam::matches(iMetaData) ||
-            Alembic::AbcGeom::IC4fGeomParam::matches(iMetaData)) && 
-            Alembic::AbcGeom::GetGeometryScope(iMetaData) ==
+    return (Alembic::AbcGeom::IC3fGeomParam::matches(iHeader) ||
+            Alembic::AbcGeom::IC4fGeomParam::matches(iHeader)) && 
+            Alembic::AbcGeom::GetGeometryScope(iHeader.getMetaData()) ==
                 Alembic::AbcGeom::kFacevaryingScope &&
             (iUnmarkedFaceVaryingColors ||
-            iMetaData.get("mayaColorSet") != "");
+            iHeader.getMetaData().get("mayaColorSet") != "");
 }

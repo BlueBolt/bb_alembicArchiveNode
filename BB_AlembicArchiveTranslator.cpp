@@ -24,8 +24,8 @@ class BB_AlembicArchiveTranslator : public CShapeTranslator
 
                 virtual AtNode *CreateArnoldNodes()
                 {
-                  m_isMasterDag =  IsMasterInstance(m_masterDag);
-
+                  m_isMasterDag =  IsMasterInstance();
+                  m_masterDag = GetMasterInstance();
                   if (m_isMasterDag)
                   {
                       return AddArnoldNode( "procedural" );
@@ -240,7 +240,7 @@ class BB_AlembicArchiveTranslator : public CShapeTranslator
                         return IsMotionBlurEnabled( MTOA_MBLUR_OBJECT ) && IsLocalMotionBlurEnabled();
                 }
 
-                virtual void ExportMotion( AtNode *node, AtUInt step )
+                virtual void ExportMotion( AtNode *node, unsigned int step )
                 {
                         if( !IsMotionBlurEnabled() )
                         {
@@ -326,7 +326,7 @@ class BB_AlembicArchiveTranslator : public CShapeTranslator
                   }
 
                   // return the exported surface shader
-                  return m_session->ExportNode( shadingGroupPlug );
+                  return ExportNode( shadingGroupPlug );
                 }
 
         protected :

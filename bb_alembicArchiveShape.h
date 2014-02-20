@@ -43,12 +43,16 @@ Based upon animaAlembicHolder by Olli Rajala @ anima
 #include "Transport.h"
 #include "Scene.h"
 #include "SceneManager.h"
-#include "NodeIteratorVisitorHelper.h"
+// #include "NodeIteratorVisitorHelper.h"
 
 //#include "AlembicGeometry.h"
 
+// #include <AbcOpenGL/All.h> // TODO use the new opengl library instaed
+
 #include <Alembic/AbcGeom/All.h>
+#include <Alembic/AbcCoreFactory/IFactory.h>
 #include <Alembic/AbcCoreHDF5/All.h>
+#include <Alembic/AbcCoreOgawa/ReadWrite.h>
 
 #include <maya/MPxNode.h>
 #include <maya/MPxSurfaceShape.h>
@@ -79,14 +83,14 @@ Based upon animaAlembicHolder by Olli Rajala @ anima
 #include <maya/MTextureEditorDrawInfo.h>
 
 //include the renderman interface header for the procedural stuff
-#include <ri.h>
+// #include <ri.h>
 
 #include <set>
 
 #include <iostream>
 #include <vector>
 
-#include "GlShaderHolder.h"
+// #include "GlShaderHolder.h"
 
 // Geometry class
 class AlembicArchiveGeom
@@ -209,7 +213,7 @@ public:
     bool m_showbb;
     SimpleAbcViewer::ScenePtr m_scene;
     
-    static GlShaderHolder glshader;
+    // static GlShaderHolder glshader;
     
     MStatus archiveShadersAndAttribs() const;
 
@@ -229,7 +233,7 @@ private:
 
     void walk(Alembic::Abc::IObject iObj);
 
-    WriterData oData;
+    // WriterData oData;
 
 };
 

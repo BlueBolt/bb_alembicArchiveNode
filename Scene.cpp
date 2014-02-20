@@ -104,8 +104,10 @@ Scene::Scene( const std::string &abcFileName, const std::string &objectPath )
 
 //    std::cout << "Beginning to open archive: " << abcFileName << std::endl;
 
-    m_archive = IArchive( Alembic::AbcCoreHDF5::ReadArchive(),
-                          abcFileName );
+    Alembic::AbcCoreFactory::IFactory factory;
+    factory.setPolicy(Alembic::Abc::ErrorHandler::kQuietNoopPolicy);
+
+    m_archive = IArchive( factory.getArchive(abcFileName) );
     m_topObject = IObject( m_archive, kTop );
     
 //    std::cout << "Opened archive and top object, creating drawables."

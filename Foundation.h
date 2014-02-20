@@ -38,6 +38,8 @@
 #define _SimpleAbcViewer_Foundation_h_
 
 #include <Alembic/AbcGeom/All.h>
+#include <Alembic/AbcCoreFactory/IFactory.h>
+#include <Alembic/AbcCoreOgawa/ReadWrite.h>
 #include <Alembic/AbcCoreHDF5/All.h>
 //#include <Alembic/GLUtil/All.h>
 #include <Alembic/Util/All.h>
@@ -55,6 +57,7 @@
 #include <boost/preprocessor/stringize.hpp>
 #include <boost/timer.hpp>
 #include <boost/program_options.hpp>
+#include <boost/utility.hpp>
 
 #include <iostream>
 #include <algorithm>

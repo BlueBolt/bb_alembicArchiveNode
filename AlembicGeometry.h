@@ -42,10 +42,10 @@ public:
 class AlembicPolymeshGeometry : public AlembicGeometry{
 private:
    std::vector<AtVector> m_vlist;
-   std::vector<AtUInt> m_vidxs;
+   std::vector<unsigned int> m_vidxs;
    std::vector<AtVector> m_nlist;
-   std::vector<AtUInt> m_nidxs;
-   std::vector<AtUInt> m_nsides;
+   std::vector<unsigned int> m_nidxs;
+   std::vector<unsigned int> m_nsides;
 public:
    AlembicPolymeshGeometry(IObject* object, AtMatrix transform_matrix, MBoundingBox& bbox);
    ~AlembicPolymeshGeometry();
@@ -59,10 +59,10 @@ public:
 class AlembicSubDGeometry : public AlembicGeometry{
 private:
    std::vector<AtVector> m_vlist;
-   std::vector<AtUInt> m_vidxs;
+   std::vector<unsigned int> m_vidxs;
    std::vector<AtVector> m_nlist;
-   std::vector<AtUInt> m_nidxs;
-   std::vector<AtUInt> m_nsides;
+   std::vector<unsigned int> m_nidxs;
+   std::vector<unsigned int> m_nsides;
 public:
    AlembicSubDGeometry(IObject* object, AtMatrix transform_matrix, MBoundingBox& bbox);
    ~AlembicSubDGeometry();
