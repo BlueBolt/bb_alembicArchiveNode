@@ -38,8 +38,8 @@
 #include "IPolyMeshDrw.h"
 //#include "ISimpleXformDrw.h"
 #include "IXformDrw.h"
-//#include "IPointsDrw.h"
-#include "ISubDDrw.h"
+// #include "IPointsDrw.h"
+// #include "ISubDDrw.h"
 
 namespace SimpleAbcViewer {
 
@@ -53,8 +53,8 @@ IObjectDrw::IObjectDrw( IObject &iObj, bool iResetIfNoChildren, std::vector<std:
     // If not valid, just bail.
     if ( !m_object ) { return; }
 
-//    std::cout << "IObjectDraw path: " << path << std::endl;
     if (path.size()) {
+        // std::cout << "IObjectDraw path: " << path[0] << std::endl;
         const ObjectHeader *ohead = m_object.getChildHeader( path[0] );
         if ( ohead!=NULL ) {
             path.erase(path.begin());
@@ -79,11 +79,14 @@ IObjectDrw::IObjectDrw( IObject &iObj, bool iResetIfNoChildren, std::vector<std:
         for ( size_t i = 0; i < numChildren; ++i )
         {
             const ObjectHeader &ohead = m_object.getChildHeader( i );
+            std::cout << "IObjectDraw path: " << ohead.getName() << std::endl;
 
             // Decide what to make.
             DrawablePtr dptr;
             if ( IPolyMesh::matches( ohead ) )
             {
+
+                // std::cout << "IPolyMesh path: " << ohead.getName() << std::endl;
                 IPolyMesh pmesh( m_object, ohead.getName() );
                 if ( pmesh )
                 {
@@ -108,22 +111,27 @@ IObjectDrw::IObjectDrw( IObject &iObj, bool iResetIfNoChildren, std::vector<std:
             }
     */        else if ( IXform::matches( ohead ) )
             {
+                // std::cout << "IXform path: " << ohead.getName() << std::endl;
+
                 IXform xform( m_object, ohead.getName() );
                 if ( xform )
                 {
                     dptr.reset( new IXformDrw( xform, path ) );
                 }
             }
-            else if ( ISubD::matches( ohead ) )
-            {
-                ISubD subd( m_object, ohead.getName() );
-                if ( subd )
-                {
-                    dptr.reset( new ISubDDrw( subd, path  ) );
-                }
-            }
+            // else if ( ISubD::matches( ohead ) )
+            // {
+            //     // std::cout << "ISubD path: " << ohead.getName() << std::endl;
+                
+            //     ISubD subd( m_object, ohead.getName() );
+            //     if ( subd )
+            //     {
+            //         dptr.reset( new ISubDDrw( subd, path  ) );
+            //     }
+            // }
             else
             {
+                // std::cout << "IObject path: " << ohead.getName() << std::endl;
                 IObject object( m_object, ohead.getName() );
                 if ( object )
                 {

@@ -145,6 +145,8 @@ void IPolyMeshDrw::draw( const DrawContext &iCtx )
         return;
     }
 
+    // std::cout << "bb_alembicArchiveShapeUI::draw -> IPolyMeshDrw:" << m_drwHelper.getName() << std::endl;
+
     m_drwHelper.draw( iCtx );
 
     IObjectDrw::draw( iCtx );

@@ -93,6 +93,8 @@ public:
     
     void setName(std::string name) { m_name = name; }
 
+    std::string getName() const { return m_name; }
+
 protected:
     void computeBounds();
 

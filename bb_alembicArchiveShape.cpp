@@ -1482,13 +1482,13 @@ void bb_alembicArchiveShapeUI::draw( const MDrawRequest & request, M3dView & vie
 
     view.beginGL();
 
-    std::cout << "bb_alembicArchiveShapeUI::draw -> mode:" << request.token() << std::endl;
+    // std::cout << "bb_alembicArchiveShapeUI::draw -> mode:" << request.token() << std::endl;
 
 
     //archiveShape->setHolderTime();
 
     // draw the bounding box
-    std::cout << "bb_alembicArchiveShapeUI::draw -> bmin:" << bmin << "bmax:" << bmax << std::endl;
+    // std::cout << "bb_alembicArchiveShapeUI::draw -> bmin:" << bmin << "bmax:" << bmax << std::endl;
 //[-1.79769e+308, -1.79769e+308, -1.79769e+308]bmax:[1.79769e+308, 1.79769e+308, 1.79769e+308]
 
     drawABox(bmin,bmax,false);

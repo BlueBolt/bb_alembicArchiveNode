@@ -44,7 +44,7 @@ File:pluginMain.cpp
 MStatus initializePlugin( MObject obj )
 { 
     MStatus   st;
-    const char * pluginVersion = "1.0.3";
+    const char * pluginVersion = "1.2.0";
     MFnPlugin plugin( obj, "BlueBolt Ltd.",pluginVersion, "Any");
 
     st = plugin.registerShape( bb_alembicArchiveShape::name, bb_alembicArchiveShape::id, bb_alembicArchiveShape::creator, bb_alembicArchiveShape::initialize, bb_alembicArchiveShapeUI::creator );

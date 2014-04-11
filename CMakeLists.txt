@@ -40,11 +40,11 @@ SET( H_FILES
 	bb_alembicArchiveShape.h
 	Foundation.h
 	IPolyMeshDrw.h
-	ISubDDrw.h
-	PathUtil.h
-	timer.h
-	Drawable.h
 	IXformDrw.h
+    ISubDDrw.h
+    PathUtil.h
+    timer.h
+    Drawable.h
 	Scene.h
 	Transport.h
 	DrawContext.h
@@ -92,6 +92,8 @@ SET( SOURCE_FILES ${CXX_FILES} ${H_FILES} )
 SET( CORE_LIBS
   AlembicAbcGeom
   AlembicAbc
+  AlembicAbcCoreFactory
+  AlembicAbcCoreOgawa
   AlembicAbcCoreHDF5
   AlembicAbcCoreAbstract
   AlembicUtil )
@@ -101,7 +103,7 @@ INCLUDE_DIRECTORIES( ".." )
 INCLUDE_DIRECTORIES( "../lib" )
 INCLUDE_DIRECTORIES( ${ALEMBIC_PRMAN_INCLUDE_PATH} )
 INCLUDE_DIRECTORIES( ${ALEMBIC_ARNOLD_INCLUDE_PATH} )
-INCLUDE_DIRECTORIES( ${ALEMBIC_MTOA_INCLUDE_PATH} ) # Lets hard codee this path for now, later we will add a cmake file
+INCLUDE_DIRECTORIES( ${ALEMBIC_MTOA_INCLUDE_PATH} ) 
 INCLUDE_DIRECTORIES( "/development/playground/maya/include" )
 
 ADD_MAYA_CXX_PLUGIN( bb_alembicArchiveShape ${SOURCE_FILES} )

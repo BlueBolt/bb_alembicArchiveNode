@@ -98,7 +98,7 @@ class BB_AlembicArchiveTranslator : public CShapeTranslator
                         // do basic node export
                         ExportMatrix( node, 0 );
 
-                        AiNodeSetPtr( node, "shader", arnoldShader(node) );
+                        // AiNodeSetPtr( node, "shader", arnoldShader(node) );
 
                         AiNodeSetInt( node, "visibility", ComputeVisibility() );
 
@@ -120,6 +120,8 @@ class BB_AlembicArchiveTranslator : public CShapeTranslator
                                 AiNodeSetBool( node, "opaque", plug.asBool() );
                         }
 
+                        AiNodeSetBool( node, "load_at_init", true );
+
                         // now set the procedural-specific parameters
 
                         MFnDagNode fnDagNode( m_dagPath );
@@ -130,20 +132,6 @@ class BB_AlembicArchiveTranslator : public CShapeTranslator
 
                         const char *dsoPath = getenv( "ALEMBIC_ARNOLD_PROCEDURAL_PATH" );
                         AiNodeSetStr( node, "dso",  dsoPath ? dsoPath : "bb_AlembicArnoldProcedural.so" );
-
-//                        AiNodeDeclare( node, "className", "constant STRING" );
-//                        AiNodeDeclare( node, "classVersion", "constant INT" );
-//                        AiNodeDeclare( node, "parameterValues", "constant ARRAY STRING" );
-
-                        // cast should be ok as we're registered to only work on procedural holders
-//                        IECoreMaya::ProceduralHolder *pHolder = static_cast<IECoreMaya::ProceduralHolder *>( fnDagNode.userNode() );
-
-                        std::string className;
-                        int classVersion;
-//                        IECore::ParameterisedProceduralPtr procedural = pHolder->getProcedural( &className, &classVersion );
-
-//                        AiNodeSetStr( node, "className", className.c_str() );
-//                        AiNodeSetInt( node, "classVersion", classVersion );
 
                         // Set the parameters for the procedural
 

@@ -102,7 +102,7 @@ Scene::Scene( const std::string &abcFileName, const std::string &objectPath )
 {        
     boost::timer Timer;
 
-//    std::cout << "Beginning to open archive: " << abcFileName << std::endl;
+   std::cout << "Beginning to open archive: " << abcFileName << std::endl;
 
     Alembic::AbcCoreFactory::IFactory factory;
     factory.setPolicy(Alembic::Abc::ErrorHandler::kQuietNoopPolicy);
@@ -110,11 +110,11 @@ Scene::Scene( const std::string &abcFileName, const std::string &objectPath )
     m_archive = IArchive( factory.getArchive(abcFileName) );
     m_topObject = IObject( m_archive, kTop );
     
-//    std::cout << "Opened archive and top object, creating drawables."
-//              << std::endl;
+   std::cout << "Opened archive and top object, creating drawables."
+             << std::endl;
 
-//    std::cout << "ObjectPath " << objectPath
-//              << std::endl;
+   std::cout << "ObjectPath " << objectPath
+             << std::endl;
 
 
     // try to walk to the path
@@ -148,21 +148,21 @@ Scene::Scene( const std::string &abcFileName, const std::string &objectPath )
     ABCA_ASSERT( m_drawable->valid(),
                  "Invalid drawable for archive: " << abcFileName );
 
-//    std::cout << "Created drawables, getting time range." << std::endl;
+   std::cout << "Created drawables, getting time range." << std::endl;
     m_minTime = m_drawable->getMinTime();
     m_maxTime = m_drawable->getMaxTime();
 
     if ( m_minTime <= m_maxTime )
     {
-//        std::cout << "\nMin Time: " << m_minTime << " seconds " << std::endl
-//                  << "Max Time: " << m_maxTime << " seconds " << std::endl
-//                  << "\nLoading min time." << std::endl;
+       std::cout << "\nMin Time: " << m_minTime << " seconds " << std::endl
+                 << "Max Time: " << m_maxTime << " seconds " << std::endl
+                 << "\nLoading min time." << std::endl;
         m_drawable->setTime( m_minTime );
     }
     else
     {
-//        std::cout << "\nConstant Time." << std::endl
-//                  << "\nLoading constant sample." << std::endl;
+       std::cout << "\nConstant Time." << std::endl
+                 << "\nLoading constant sample." << std::endl;
         m_minTime = m_maxTime = 0.0;
         m_drawable->setTime( 0.0 );
     }
@@ -170,13 +170,13 @@ Scene::Scene( const std::string &abcFileName, const std::string &objectPath )
     ABCA_ASSERT( m_drawable->valid(),
                  "Invalid drawable after reading start time" );
 
-//    std::cout << "Done opening archive. Elapsed time: "
-//             << Timer.elapsed() << " seconds." << std::endl;
+   std::cout << "Done opening archive. Elapsed time: "
+            << Timer.elapsed() << " seconds." << std::endl;
 
     // Bounds have been formed!
     m_bounds = m_drawable->getBounds();
-//    std::cout << "Bounds at min time: " << m_bounds.min << " to "
-//              << m_bounds.max << std::endl;
+   std::cout << "Bounds at min time: " << m_bounds.min << " to "
+             << m_bounds.max << std::endl;
 
 
 }
